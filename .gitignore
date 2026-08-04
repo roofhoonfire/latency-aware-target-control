@@ -1,0 +1,13 @@
+# CMake build output
+build/
+
+# Compiled files
+*.o
+*.out
+
+# IDE metadata
+.vscode/
+.idea/
+
+# Generated runtime logs
+results/logs/*.csv

@@ -13,6 +13,7 @@ add_library(
     protocol_codec
     STATIC
     src/target_command_codec.c
+    src/uart_frame_codec.c
 )
 
 target_link_libraries(

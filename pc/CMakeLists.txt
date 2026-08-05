@@ -3,12 +3,6 @@ add_executable(
     src/main.cpp
 )
 
-target_include_directories(
-    target_control_pc
-    PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-
 target_compile_options(
     target_control_pc
     PRIVATE
@@ -20,5 +14,5 @@ target_compile_options(
 target_link_libraries(
     target_control_pc
     PRIVATE
-    protocol_types
+    protocol_codec
 )

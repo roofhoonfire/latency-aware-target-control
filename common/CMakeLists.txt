@@ -12,6 +12,7 @@ target_include_directories(
 add_library(
     protocol_codec
     STATIC
+    src/crc16.c
     src/target_command_codec.c
     src/uart_frame_codec.c
 )

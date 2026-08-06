@@ -21,3 +21,53 @@ add_test(
     NAME target_command_codec_test
     COMMAND target_command_codec_test
 )
+
+
+add_executable(
+    crc16_test
+    common/crc16_test.cpp
+)
+
+target_compile_options(
+    crc16_test
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    crc16_test
+    PRIVATE
+    protocol_codec
+)
+
+add_test(
+    NAME crc16_test
+    COMMAND crc16_test
+)
+
+
+add_executable(
+    uart_frame_codec_test
+    common/uart_frame_codec_test.cpp
+)
+
+target_compile_options(
+    uart_frame_codec_test
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    uart_frame_codec_test
+    PRIVATE
+    protocol_codec
+)
+
+add_test(
+    NAME uart_frame_codec_test
+    COMMAND uart_frame_codec_test
+)

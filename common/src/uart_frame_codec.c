@@ -1,5 +1,5 @@
 #include "protocol/uart_frame_codec.h"
-
+#include "protocol/crc16.h"
 #include <string.h>
 
 /*
@@ -40,40 +40,6 @@ size_t uart_frame_encoded_size(size_t payload_size)
     return payload_size + UART_FRAME_OVERHEAD_SIZE;
 }
 
-uint16_t uart_frame_crc16_ccitt_false(
-    const uint8_t* data,
-    size_t data_size)
-{
-    uint16_t crc = 0xFFFFU;
-
-    if ((data == NULL) && (data_size > 0U))
-    {
-        return 0U;
-    }
-
-    for (size_t byte_index = 0U;
-         byte_index < data_size;
-         ++byte_index)
-    {
-        crc ^= (uint16_t)((uint16_t)data[byte_index] << 8U);
-
-        for (uint8_t bit_index = 0U;
-             bit_index < 8U;
-             ++bit_index)
-        {
-            if ((crc & 0x8000U) != 0U)
-            {
-                crc = (uint16_t)((crc << 1U) ^ 0x1021U);
-            }
-            else
-            {
-                crc = (uint16_t)(crc << 1U);
-            }
-        }
-    }
-
-    return crc;
-}
 
 bool uart_frame_encode(
     uint8_t message_type,
@@ -140,11 +106,15 @@ bool uart_frame_encode(
     const size_t crc_input_size =
         3U + payload_size;
 
-    const uint16_t crc =
-        uart_frame_crc16_ccitt_false(
-            &frame_buffer[UART_FRAME_VERSION_OFFSET],
-            crc_input_size
-        );
+ uint16_t crc = 0U;
+
+if (!crc16_ccitt_false_calculate(
+        &frame_buffer[UART_FRAME_VERSION_OFFSET],
+        crc_input_size,
+        &crc))
+{
+    return false;
+}
 
     const size_t crc_offset =
         UART_FRAME_PAYLOAD_OFFSET + payload_size;
@@ -214,11 +184,15 @@ bool uart_frame_decode(
     const size_t crc_input_size =
         3U + (size_t)payload_length;
 
-    const uint16_t calculated_crc =
-        uart_frame_crc16_ccitt_false(
-            &frame_buffer[UART_FRAME_VERSION_OFFSET],
-            crc_input_size
-        );
+  uint16_t calculated_crc = 0U;
+
+if (!crc16_ccitt_false_calculate(
+        &frame_buffer[UART_FRAME_VERSION_OFFSET],
+        crc_input_size,
+        &calculated_crc))
+{
+    return false;
+}
 
     if (received_crc != calculated_crc)
     {

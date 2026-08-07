@@ -71,3 +71,33 @@ add_test(
     NAME uart_frame_codec_test
     COMMAND uart_frame_codec_test
 )
+
+add_executable(
+    serial_port_test
+    pc/serial_port_test.cpp
+)
+
+target_compile_features(
+    serial_port_test
+    PRIVATE
+    cxx_std_17
+)
+
+target_compile_options(
+    serial_port_test
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    serial_port_test
+    PRIVATE
+    pc_uart_transport
+)
+
+add_test(
+    NAME serial_port_test
+    COMMAND serial_port_test
+)

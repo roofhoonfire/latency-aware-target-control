@@ -1,6 +1,8 @@
 #include <array>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 
@@ -8,6 +10,8 @@
 #include "protocol/target_command_codec.h"
 #include "protocol/uart_frame.h"
 #include "protocol/uart_frame_codec.h"
+
+#include "transport/serial_port.h"
 
 namespace
 {
@@ -22,15 +26,20 @@ void print_bytes(
     const std::uint8_t* data,
     std::size_t size)
 {
-    std::cout << label << " (" << size << " bytes): ";
+    std::cout
+        << label
+        << " ("
+        << size
+        << " bytes): ";
 
     for (std::size_t i = 0U; i < size; ++i)
     {
-        std::cout << std::hex
-                  << std::uppercase
-                  << std::setw(2)
-                  << std::setfill('0')
-                  << static_cast<unsigned int>(data[i]);
+        std::cout
+            << std::hex
+            << std::uppercase
+            << std::setw(2)
+            << std::setfill('0')
+            << static_cast<unsigned int>(data[i]);
 
         if (i + 1U < size)
         {
@@ -53,10 +62,29 @@ bool commands_equal(
 
 }  // namespace
 
-int main()
+int main(int argc, char* argv[])
 {
     /*
-     * PC 애플리케이션이 생성했다고 가정하는 원본 명령.
+     * Serial Device 경로를 명령행 인자로 받는다.
+     *
+     * 예:
+     * ./target_control_pc /dev/ttyACM0
+     */
+    if (argc != 2)
+    {
+        std::cerr
+            << "Usage: "
+            << argv[0]
+            << " <serial-device>\n";
+
+        return 1;
+    }
+
+    const char* const serial_device_path = argv[1];
+
+    /*
+     * Step 1:
+     * Application 계층의 원본 TargetCommand 생성.
      */
     const TargetCommand original_command{
         1U,
@@ -66,8 +94,8 @@ int main()
     };
 
     /*
-     * Step 1:
-     * TargetCommand → 고정 8바이트 Payload
+     * Step 2:
+     * TargetCommand → 8-byte Payload
      */
     std::array<std::uint8_t, TARGET_COMMAND_WIRE_SIZE> payload{};
 
@@ -76,7 +104,9 @@ int main()
             payload.data(),
             payload.size()))
     {
-        std::cerr << "Failed to serialize TargetCommand.\n";
+        std::cerr
+            << "Failed to serialize TargetCommand.\n";
+
         return 1;
     }
 
@@ -86,33 +116,30 @@ int main()
         payload.size());
 
     /*
-     * Step 2:
-     * Payload 길이를 기준으로 필요한 UART Frame 크기 계산.
-     *
-     * TargetCommand Payload 8바이트 + Frame Overhead 7바이트
-     * = 총 15바이트여야 한다.
+     * Step 3:
+     * 필요한 UART Frame 크기 계산.
      */
     const std::size_t required_frame_size =
         uart_frame_encoded_size(payload.size());
 
     if (required_frame_size != kTargetCommandFrameSize)
     {
-        std::cerr << "Unexpected UART frame size: "
-                  << required_frame_size
-                  << '\n';
+        std::cerr
+            << "Unexpected UART frame size: "
+            << required_frame_size
+            << '\n';
 
         return 1;
     }
 
-    /*
-     * 동적 메모리를 사용하지 않고 고정 크기 배열 사용.
-     */
-    std::array<std::uint8_t, kTargetCommandFrameSize> frame_buffer{};
+    std::array<
+        std::uint8_t,
+        kTargetCommandFrameSize> frame_buffer{};
 
     std::size_t encoded_size = 0U;
 
     /*
-     * Step 3:
+     * Step 4:
      * Payload → UART Frame
      */
     if (!uart_frame_encode(
@@ -123,7 +150,9 @@ int main()
             frame_buffer.size(),
             &encoded_size))
     {
-        std::cerr << "Failed to encode UART frame.\n";
+        std::cerr
+            << "Failed to encode UART frame.\n";
+
         return 1;
     }
 
@@ -132,13 +161,16 @@ int main()
         frame_buffer.data(),
         encoded_size);
 
-    std::cout << "Total Size: "
-              << encoded_size
-              << " bytes\n";
+    std::cout
+        << "Total Size       : "
+        << encoded_size
+        << " bytes\n";
 
     /*
-     * Step 4:
-     * UART Frame → UartFrameView
+     * 기존 PC Mock 검증도 유지한다.
+     *
+     * Frame을 한 번 Decode하여 Protocol 계층이
+     * 정상 동작하는지 확인한 뒤 실제 송신한다.
      */
     UartFrameView decoded_frame{};
 
@@ -147,47 +179,30 @@ int main()
             encoded_size,
             &decoded_frame))
     {
-        std::cerr << "Failed to decode UART frame.\n";
+        std::cerr
+            << "Failed to decode UART frame.\n";
+
         return 1;
     }
 
-    /*
-     * Step 5:
-     * Message Type 검사.
-     *
-     * Frame Decode 성공이 곧 TargetCommand라는 뜻은 아니다.
-     * 다른 종류의 메시지도 동일한 UART Frame 형식을 사용할 수 있다.
-     */
     if (decoded_frame.message_type !=
         UART_MESSAGE_TYPE_TARGET_COMMAND)
     {
-        std::cerr << "Unexpected message type: "
-                  << static_cast<unsigned int>(
-                         decoded_frame.message_type)
-                  << '\n';
+        std::cerr
+            << "Unexpected message type.\n";
 
         return 1;
     }
 
-    /*
-     * Step 6:
-     * TargetCommand가 요구하는 Payload 길이 검사.
-     */
     if (decoded_frame.payload_length !=
         TARGET_COMMAND_WIRE_SIZE)
     {
-        std::cerr << "Unexpected payload length: "
-                  << static_cast<unsigned int>(
-                         decoded_frame.payload_length)
-                  << '\n';
+        std::cerr
+            << "Unexpected payload length.\n";
 
         return 1;
     }
 
-    /*
-     * Step 7:
-     * Decode된 Payload → TargetCommand
-     */
     TargetCommand decoded_command{};
 
     if (!target_command_deserialize(
@@ -195,14 +210,12 @@ int main()
             decoded_frame.payload_length,
             &decoded_command))
     {
-        std::cerr << "Failed to deserialize TargetCommand.\n";
+        std::cerr
+            << "Failed to deserialize TargetCommand.\n";
+
         return 1;
     }
 
-    /*
-     * Step 8:
-     * 원본과 복원 결과 비교.
-     */
     if (!commands_equal(
             original_command,
             decoded_command))
@@ -213,45 +226,83 @@ int main()
         return 1;
     }
 
+    std::cout
+        << "Protocol Round Trip: PASS\n";
+
     /*
-     * 정상 결과 출력.
+     * Step 5:
+     * Transport 계층 시작.
      */
-    std::cout << "Version         : 0x"
-              << std::hex
-              << std::uppercase
-              << std::setw(2)
-              << std::setfill('0')
-              << static_cast<unsigned int>(
-                     decoded_frame.version)
-              << '\n';
+    latc::transport::SerialPort serial_port;
 
-    std::cout << "Message Type    : 0x"
-              << std::hex
-              << std::uppercase
-              << std::setw(2)
-              << std::setfill('0')
-              << static_cast<unsigned int>(
-                     decoded_frame.message_type)
-              << '\n';
+    std::cout
+        << "Serial Device    : "
+        << serial_device_path
+        << '\n';
 
-    std::cout << std::dec;
+    /*
+     * Linux Serial Device Open + 115200 8N1 Raw 설정.
+     */
+    if (!serial_port.open(serial_device_path))
+    {
+        std::cerr
+            << "Failed to open serial device: "
+            << std::strerror(errno)
+            << '\n';
 
-    std::cout << "Payload Length  : "
-              << static_cast<unsigned int>(
-                     decoded_frame.payload_length)
-              << " bytes\n";
+        return 1;
+    }
 
-    std::cout << "Decoded Command : sequence="
-              << decoded_command.sequence
-              << ", target_x="
-              << decoded_command.target_x
-              << ", target_y="
-              << decoded_command.target_y
-              << ", prediction_ms="
-              << decoded_command.prediction_ms
-              << '\n';
+    std::cout
+        << "Baud Rate        : "
+        << latc::transport::SerialPort::kBaudRate
+        << '\n';
 
-    std::cout << "Round Trip      : PASS\n";
+    /*
+     * Step 6:
+     * UART Frame 전체 송신.
+     */
+    std::size_t bytes_written = 0U;
+
+    if (!serial_port.write_all(
+            frame_buffer.data(),
+            encoded_size,
+            &bytes_written))
+    {
+        std::cerr
+            << "Serial transmission failed after "
+            << bytes_written
+            << " bytes: "
+            << std::strerror(errno)
+            << '\n';
+
+        return 1;
+    }
+
+    std::cout
+        << "Bytes Transmitted: "
+        << bytes_written
+        << '\n';
+
+    /*
+     * Step 7:
+     * Serial Device 명시적으로 닫기.
+     *
+     * 생략해도 소멸자가 닫지만,
+     * 여기서는 성공/실패를 확인하기 위해 직접 호출한다.
+     */
+    if (!serial_port.close())
+    {
+        std::cerr
+            << "Failed to close serial device: "
+            << std::strerror(errno)
+            << '\n';
+
+        return 1;
+    }
+
+    std::cout
+        << "Transmission     : PASS\n";
 
     return 0;
 }

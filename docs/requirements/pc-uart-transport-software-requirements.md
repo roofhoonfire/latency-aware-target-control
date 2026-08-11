@@ -45,16 +45,16 @@ module.
 
 The initial UART communication configuration shall be:
 
-| Parameter             |    Value |
-| --------------------- | -------: |
-| Baud rate             |   115200 |
-| Data bits             |        8 |
-| Parity                |     None |
-| Stop bits             |        1 |
+| Parameter             | Value    |
+| --------------------- | --------:|
+| Baud rate             | 115200   |
+| Data bits             | 8        |
+| Parity                | None     |
+| Stop bits             | 1        |
 | Hardware flow control | Disabled |
 | Software flow control | Disabled |
-| Operating mode        |      Raw |
-| Platform              |    Linux |
+| Operating mode        | Raw      |
+| Platform              | Linux    |
 
 This configuration is commonly described as:
 
@@ -428,4 +428,3 @@ Transport implementation:
 * End-to-end latency measurement
 * Automatic serial-device discovery
 * Windows or macOS serial-port support
-

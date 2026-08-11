@@ -1,19 +1,9 @@
 #include "protocol/uart_frame_codec.h"
 #include "protocol/crc16.h"
+#include "protocol/uart_frame_validator.h"
+
 #include <string.h>
 
-/*
- * UART frame wire-format offsets
- */
-enum
-{
-    UART_FRAME_SOF_1_OFFSET          = 0U,
-    UART_FRAME_SOF_2_OFFSET          = 1U,
-    UART_FRAME_VERSION_OFFSET        = 2U,
-    UART_FRAME_MESSAGE_TYPE_OFFSET   = 3U,
-    UART_FRAME_PAYLOAD_LENGTH_OFFSET = 4U,
-    UART_FRAME_PAYLOAD_OFFSET        = 5U
-};
 
 static void write_u16_le(uint8_t* buffer, uint16_t value)
 {
@@ -21,14 +11,6 @@ static void write_u16_le(uint8_t* buffer, uint16_t value)
     buffer[1] = (uint8_t)((value >> 8U) & 0x00FFU);
 }
 
-static uint16_t read_u16_le(const uint8_t* buffer)
-{
-    const uint16_t low_byte = (uint16_t)buffer[0];
-    const uint16_t high_byte =
-        (uint16_t)((uint16_t)buffer[1] << 8U);
-
-    return (uint16_t)(low_byte | high_byte);
-}
 
 size_t uart_frame_encoded_size(size_t payload_size)
 {
@@ -134,70 +116,21 @@ bool uart_frame_decode(
     size_t frame_size,
     UartFrameView* decoded_frame)
 {
-    if ((frame_buffer == NULL) ||
-        (decoded_frame == NULL))
+    if (decoded_frame == NULL)
     {
         return false;
     }
 
-    if (frame_size < UART_FRAME_MIN_SIZE)
-    {
-        return false;
-    }
+    const UartFrameValidationResult validation_result =
+        uart_frame_validate(frame_buffer, frame_size);
 
-    if (frame_buffer[UART_FRAME_SOF_1_OFFSET] !=
-        UART_FRAME_SOF_1)
-    {
-        return false;
-    }
-
-    if (frame_buffer[UART_FRAME_SOF_2_OFFSET] !=
-        UART_FRAME_SOF_2)
-    {
-        return false;
-    }
-
-    if (frame_buffer[UART_FRAME_VERSION_OFFSET] !=
-        UART_FRAME_VERSION)
+    if (validation_result != UART_FRAME_VALID)
     {
         return false;
     }
 
     const uint8_t payload_length =
         frame_buffer[UART_FRAME_PAYLOAD_LENGTH_OFFSET];
-
-    const size_t expected_frame_size =
-        uart_frame_encoded_size((size_t)payload_length);
-
-    if (frame_size != expected_frame_size)
-    {
-        return false;
-    }
-
-    const size_t crc_offset =
-        UART_FRAME_PAYLOAD_OFFSET +
-        (size_t)payload_length;
-
-    const uint16_t received_crc =
-        read_u16_le(&frame_buffer[crc_offset]);
-
-    const size_t crc_input_size =
-        3U + (size_t)payload_length;
-
-  uint16_t calculated_crc = 0U;
-
-if (!crc16_ccitt_false_calculate(
-        &frame_buffer[UART_FRAME_VERSION_OFFSET],
-        crc_input_size,
-        &calculated_crc))
-{
-    return false;
-}
-
-    if (received_crc != calculated_crc)
-    {
-        return false;
-    }
 
     /*
      * Use a local object so that the caller-visible output is not

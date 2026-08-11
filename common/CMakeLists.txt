@@ -15,6 +15,7 @@ add_library(
     src/crc16.c
     src/target_command_codec.c
     src/uart_frame_codec.c
+    src/uart_frame_validator.c
 )
 
 target_link_libraries(

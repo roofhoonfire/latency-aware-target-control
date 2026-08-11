@@ -101,3 +101,27 @@ add_test(
     NAME serial_port_test
     COMMAND serial_port_test
 )
+
+add_executable(
+    uart_frame_validator_test
+    common/uart_frame_validator_test.cpp
+)
+
+target_compile_options(
+    uart_frame_validator_test
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    uart_frame_validator_test
+    PRIVATE
+    protocol_codec
+)
+
+add_test(
+    NAME uart_frame_validator_test
+    COMMAND uart_frame_validator_test
+)

@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "protocol/uart_frame_validator.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,6 +46,10 @@ UART_HandleTypeDef huart1;
 
 uint8_t rx_buffer[15] = {0};
 volatile uint8_t rx_complete =0;
+
+
+volatile UartFrameValidationResult frame_validation_result =
+    UART_FRAME_ERROR_NULL;
 
 /* USER CODE END PV */
 
@@ -100,6 +104,12 @@ int main(void)
           HAL_MAX_DELAY) == HAL_OK)
   {
       rx_complete = 1;
+
+      frame_validation_result =
+          uart_frame_validate_target_command(
+              rx_buffer,
+              sizeof(rx_buffer)
+          );
   }
 
   /* USER CODE END 2 */

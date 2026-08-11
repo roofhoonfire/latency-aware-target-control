@@ -1,0 +1,3 @@
+../Core/Src/uart_frame_validator.c:7:17:read_u16_le	1
+../Core/Src/uart_frame_validator.c:18:27:uart_frame_validate	9
+../Core/Src/uart_frame_validator.c:93:27:uart_frame_validate_target_command	4

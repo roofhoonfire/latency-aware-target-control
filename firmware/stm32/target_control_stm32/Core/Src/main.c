@@ -21,6 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "protocol/target_command_codec.h"
+#include "protocol/uart_frame.h"
 #include "protocol/uart_frame_validator.h"
 /* USER CODE END Includes */
 
@@ -50,7 +52,9 @@ volatile uint8_t rx_complete =0;
 
 volatile UartFrameValidationResult frame_validation_result =
     UART_FRAME_ERROR_NULL;
+TargetCommand received_command = {0};
 
+volatile uint8_t target_command_ready = 0U;//0-> no valid target command, 1-> target command deserialize success
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -110,6 +114,17 @@ int main(void)
               rx_buffer,
               sizeof(rx_buffer)
           );
+
+      if (frame_validation_result == UART_FRAME_VALID)
+      {
+          if (target_command_deserialize(
+                  &rx_buffer[UART_FRAME_PAYLOAD_OFFSET],
+                  TARGET_COMMAND_WIRE_SIZE,
+                  &received_command))
+          {
+              target_command_ready = 1U;
+          }
+      }
   }
 
   /* USER CODE END 2 */

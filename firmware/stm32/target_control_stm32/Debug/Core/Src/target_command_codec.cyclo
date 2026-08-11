@@ -1,0 +1,6 @@
+../Core/Src/target_command_codec.c:23:13:write_u16_le	1
+../Core/Src/target_command_codec.c:29:17:read_u16_le	1
+../Core/Src/target_command_codec.c:38:13:write_i16_le	1
+../Core/Src/target_command_codec.c:50:16:read_i16_le	2
+../Core/Src/target_command_codec.c:69:6:target_command_serialize	4
+../Core/Src/target_command_codec.c:100:6:target_command_deserialize	4

@@ -4,5 +4,5 @@
 ../Core/Src/main.c:273:13:MX_GPIO_Init	1
 ../Core/Src/main.c:534:6:StartCommRxTask	5
 ../Core/Src/main.c:585:6:StartControlTask	6
-../Core/Src/main.c:628:6:HAL_TIM_PeriodElapsedCallback	2
-../Core/Src/main.c:646:6:Error_Handler	1
+../Core/Src/main.c:634:6:HAL_TIM_PeriodElapsedCallback	2
+../Core/Src/main.c:652:6:Error_Handler	1

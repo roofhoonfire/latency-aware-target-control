@@ -1,4 +1,29 @@
 add_library(
+    pc_detection_input
+    STATIC
+    src/detection_csv_reader.cpp
+)
+
+target_include_directories(
+    pc_detection_input
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_features(
+    pc_detection_input
+    PUBLIC
+    cxx_std_17
+)
+
+target_compile_options(
+    pc_detection_input
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+add_library(
     pc_uart_transport
     STATIC
     src/serial_port.cpp
@@ -48,4 +73,5 @@ target_link_libraries(
     PRIVATE
     protocol_codec
     pc_uart_transport
+    pc_detection_input
 )

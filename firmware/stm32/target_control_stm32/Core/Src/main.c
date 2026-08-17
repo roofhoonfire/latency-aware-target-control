@@ -586,37 +586,43 @@ void StartControlTask(void *argument)
 {
   /* USER CODE BEGIN StartControlTask */
 
+    TargetCommand command = {0};
 
-	  TargetCommand command = {0};
+    for (;;)
+    {
+        if (osMessageQueueGet(
+                targetCommandQueueHandle,
+                &command,
+                NULL,
+                osWaitForever) == osOK)
+        {
+            queue_received_command = command;
+            queue_receive_success = 1U;
 
-	  for (;;)
-	  {
-	      if (osMessageQueueGet(
-	              targetCommandQueueHandle,
-	              &command,
-	              NULL,
-	              osWaitForever) == osOK)
-	      {
-	          queue_received_command = command;
-	          queue_receive_success = 1U;
-
-	          if ((command.sequence == 1U) &&
-	              (command.target_x == 1000) &&
-	              (command.target_y == -1000) &&
-	              (command.prediction_ms == 40U))
-	          {
-	              queue_data_match = 1U;
-	          }
-	          else
-	          {
-	              queue_data_match = 0U;
-	          }
-	      }
-	  }
+            /*
+             * Queue에서 수신한 TargetCommand가
+             * CommRxTask에서 deserialize한 command와
+             * 동일한지 확인한다.
+             *
+             * 현재 one-shot integration bring-up용
+             * verification instrumentation이다.
+             */
+            if ((command.sequence == received_command.sequence) &&
+                (command.target_x == received_command.target_x) &&
+                (command.target_y == received_command.target_y) &&
+                (command.prediction_ms == received_command.prediction_ms))
+            {
+                queue_data_match = 1U;
+            }
+            else
+            {
+                queue_data_match = 0U;
+            }
+        }
+    }
 
   /* USER CODE END StartControlTask */
 }
-
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM6 interrupt took place, inside

@@ -2,6 +2,7 @@ add_library(
     pc_detection_input
     STATIC
     src/detection_csv_reader.cpp
+    src/udp_detection_receiver.cpp
 )
 
 target_include_directories(

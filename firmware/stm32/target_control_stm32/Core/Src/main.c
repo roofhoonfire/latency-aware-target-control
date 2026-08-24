@@ -25,6 +25,8 @@
 #include "protocol/target_command_codec.h"
 #include "protocol/uart_frame.h"
 #include "protocol/uart_frame_validator.h"
+#include "control/target_state.h"
+#include "control/steering_controller.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -34,7 +36,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define CONTROL_TASK_PERIOD_MS   20U
+#define TARGET_TIMEOUT_MS       400U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -76,9 +79,16 @@ volatile uint8_t target_command_ready = 0U;//0-> no valid target command, 1-> ta
 
 volatile uint8_t queue_send_success = 0U;
 volatile uint8_t queue_receive_success = 0U;
-volatile uint8_t queue_data_match = 0U;
 
-TargetCommand queue_received_command = {0};
+TargetState queue_received_target = {0};
+
+volatile uint8_t controller_init_success = 0U;
+volatile uint8_t controller_target_update_success = 0U;
+
+volatile uint32_t controller_now_ms = 0U;
+volatile uint32_t controller_step_count = 0U;
+
+volatile float desired_steering_deg = 0.0F;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,8 +159,10 @@ int main(void)
 
   /* Create the queue(s) */
   /* creation of targetCommandQueue */
-  targetCommandQueueHandle = osMessageQueueNew (4, sizeof(TargetCommand), &targetCommandQueue_attributes);
-
+  targetCommandQueueHandle = osMessageQueueNew(
+      4,
+      sizeof(TargetState),
+      &targetCommandQueue_attributes);
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -552,22 +564,27 @@ void StartCommRxTask(void *argument)
 
 	          if (frame_validation_result == UART_FRAME_VALID)
 	          {
-	              if (target_command_deserialize(
-	                      &rx_buffer[UART_FRAME_PAYLOAD_OFFSET],
-	                      TARGET_COMMAND_WIRE_SIZE,
-	                      &received_command))
-	              {
-	                  target_command_ready = 1U;
+	        	  if (target_command_deserialize(
+	        	          &rx_buffer[UART_FRAME_PAYLOAD_OFFSET],
+	        	          TARGET_COMMAND_WIRE_SIZE,
+	        	          &received_command))
+	        	  {
+	        	      target_command_ready = 1U;
 
-	                  if (osMessageQueuePut(
-	                          targetCommandQueueHandle,
-	                          &received_command,
-	                          0U,
-	                          osWaitForever) == osOK)
-	                  {
-	                      queue_send_success = 1U;
-	                  }
-	              }
+	        	      const TargetState target = {
+	        	          .x_cm = received_command.target_x,
+	        	          .y_cm = received_command.target_y
+	        	      };
+
+	        	      if (osMessageQueuePut(
+	        	              targetCommandQueueHandle,
+	        	              &target,
+	        	              0U,
+	        	              osWaitForever) == osOK)
+	        	      {
+	        	          queue_send_success = 1U;
+	        	      }
+	        	  }
 	          }
 	      }
 	  }
@@ -586,41 +603,85 @@ void StartControlTask(void *argument)
 {
   /* USER CODE BEGIN StartControlTask */
 
-    TargetCommand command = {0};
 
-    for (;;)
-    {
-        if (osMessageQueueGet(
-                targetCommandQueueHandle,
-                &command,
-                NULL,
-                osWaitForever) == osOK)
-        {
-            queue_received_command = command;
-            queue_receive_success = 1U;
+	TargetState target = {0};
 
-            /*
-             * Queue에서 수신한 TargetCommand가
-             * CommRxTask에서 deserialize한 command와
-             * 동일한지 확인한다.
-             *
-             * 현재 one-shot integration bring-up용
-             * verification instrumentation이다.
-             */
-            if ((command.sequence == received_command.sequence) &&
-                (command.target_x == received_command.target_x) &&
-                (command.target_y == received_command.target_y) &&
-                (command.prediction_ms == received_command.prediction_ms))
-            {
-                queue_data_match = 1U;
-            }
-            else
-            {
-                queue_data_match = 0U;
-            }
-        }
-    }
+	    const SteeringControllerConfig controller_config = {
+	        .wheelbase_m = 2.8F,
+	        .deadband_deg = 1.0F,
+	        .steering_limit_deg = 30.0F,
+	        .target_timeout_ms = TARGET_TIMEOUT_MS
+	    };
 
+	    SteeringController controller = {0};
+
+	    if (!steering_controller_init(
+	            &controller,
+	            &controller_config))
+	    {
+	        controller_init_success = 0U;
+	        osThreadExit();
+	    }
+
+	    controller_init_success = 1U;
+
+	    uint32_t next_wake_tick =
+	        osKernelGetTickCount();
+
+	    for (;;)
+	    {
+	        /*
+	         * Drain all targets currently waiting in the queue.
+	         *
+	         * CommRxTask remains the producer.
+	         * ControlTask is the sole owner of controller state.
+	         */
+	        while (osMessageQueueGet(
+	                   targetCommandQueueHandle,
+	                   &target,
+	                   NULL,
+	                   0U) == osOK)
+	        {
+	            queue_received_target = target;
+	            queue_receive_success = 1U;
+
+	            const uint32_t target_update_ms =
+	                osKernelGetTickCount();
+
+	            controller_target_update_success =
+	                steering_controller_update_target(
+	                    &controller,
+	                    &target,
+	                    target_update_ms)
+	                ? 1U
+	                : 0U;
+	        }
+
+	        /*
+	         * Platform Runtime obtains local time.
+	         * configTICK_RATE_HZ = 1000, therefore
+	         * one kernel tick corresponds to one millisecond.
+	         */
+	        const uint32_t now_ms =
+	            osKernelGetTickCount();
+
+	        controller_now_ms = now_ms;
+
+	        desired_steering_deg =
+	            steering_controller_step(
+	                &controller,
+	                now_ms);
+
+	        ++controller_step_count;
+
+	        /*
+	         * Absolute periodic scheduling avoids accumulating
+	         * loop execution time as timing drift.
+	         */
+	        next_wake_tick += CONTROL_TASK_PERIOD_MS;
+
+	        osDelayUntil(next_wake_tick);
+	    }
   /* USER CODE END StartControlTask */
 }
 /**

@@ -1,0 +1,6 @@
+../Core/Src/steering_controller.c:9:13:config_is_valid	16	static
+../Core/Src/steering_controller.c:53:13:target_is_semantically_valid	16	static
+../Core/Src/steering_controller.c:77:14:calculate_steering_deg	40	static
+../Core/Src/steering_controller.c:136:6:steering_controller_init	24	static
+../Core/Src/steering_controller.c:157:6:steering_controller_update_target	24	static
+../Core/Src/steering_controller.c:175:7:steering_controller_step	24	static

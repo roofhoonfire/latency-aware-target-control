@@ -125,3 +125,27 @@ add_test(
     NAME uart_frame_validator_test
     COMMAND uart_frame_validator_test
 )
+
+add_executable(
+    steering_controller_test
+    common/steering_controller_test.cpp
+)
+
+target_compile_options(
+    steering_controller_test
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    steering_controller_test
+    PRIVATE
+    control_app
+)
+
+add_test(
+    NAME steering_controller_test
+    COMMAND steering_controller_test
+)

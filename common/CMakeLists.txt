@@ -31,3 +31,29 @@ target_compile_options(
     -Wextra
     -Wpedantic
 )
+
+add_library(
+    control_app
+    STATIC
+    src/steering_controller.c
+)
+
+target_include_directories(
+    control_app
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_options(
+    control_app
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    control_app
+    PUBLIC
+    m
+)

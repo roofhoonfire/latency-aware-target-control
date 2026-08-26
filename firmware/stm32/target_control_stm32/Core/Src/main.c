@@ -89,6 +89,13 @@ volatile uint32_t controller_now_ms = 0U;
 volatile uint32_t controller_step_count = 0U;
 
 volatile float desired_steering_deg = 0.0F;
+
+
+//for time out debugging
+volatile uint32_t last_target_update_ms_debug = 0U;
+
+volatile uint8_t hold_before_timeout_seen = 0U;
+volatile uint8_t timeout_neutral_seen = 0U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -604,7 +611,7 @@ void StartControlTask(void *argument)
   /* USER CODE BEGIN StartControlTask */
 
 
-	TargetState target = {0};
+	   TargetState target = {0};
 
 	    const SteeringControllerConfig controller_config = {
 	        .wheelbase_m = 2.8F,
@@ -630,12 +637,6 @@ void StartControlTask(void *argument)
 
 	    for (;;)
 	    {
-	        /*
-	         * Drain all targets currently waiting in the queue.
-	         *
-	         * CommRxTask remains the producer.
-	         * ControlTask is the sole owner of controller state.
-	         */
 	        while (osMessageQueueGet(
 	                   targetCommandQueueHandle,
 	                   &target,
@@ -655,13 +656,13 @@ void StartControlTask(void *argument)
 	                    target_update_ms)
 	                ? 1U
 	                : 0U;
+	            // 디버깅용
+	            if (controller_target_update_success != 0U)
+	            {
+	                last_target_update_ms_debug = target_update_ms;
+	            }
 	        }
 
-	        /*
-	         * Platform Runtime obtains local time.
-	         * configTICK_RATE_HZ = 1000, therefore
-	         * one kernel tick corresponds to one millisecond.
-	         */
 	        const uint32_t now_ms =
 	            osKernelGetTickCount();
 
@@ -671,13 +672,27 @@ void StartControlTask(void *argument)
 	            steering_controller_step(
 	                &controller,
 	                now_ms);
+	        	// 디버깅용
+	        if (last_target_update_ms_debug != 0U)
+	        {
+	            const uint32_t elapsed_since_target_ms =
+	                now_ms - last_target_update_ms_debug;
 
+	            if ((elapsed_since_target_ms > 0U) &&
+	                (elapsed_since_target_ms < TARGET_TIMEOUT_MS) &&
+	                (desired_steering_deg != 0.0F))
+	            {
+	                hold_before_timeout_seen = 1U;
+	            }
+
+	            if ((elapsed_since_target_ms >= TARGET_TIMEOUT_MS) &&
+	                (desired_steering_deg == 0.0F))
+	            {
+	                timeout_neutral_seen = 1U;
+	            }
+	        }
 	        ++controller_step_count;
 
-	        /*
-	         * Absolute periodic scheduling avoids accumulating
-	         * loop execution time as timing drift.
-	         */
 	        next_wake_tick += CONTROL_TASK_PERIOD_MS;
 
 	        osDelayUntil(next_wake_tick);

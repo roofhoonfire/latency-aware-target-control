@@ -1,0 +1,465 @@
+15:20:37 DEBUG : Logs will be stored at '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/IDE.log'.
+15:20:38 INFO  : Launching XSCT server: xsct -n  -interactive /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/temp_xsdb_launch_script.tcl
+15:20:38 INFO  : Platform repository initialization has completed.
+15:20:38 INFO  : Registering command handlers for Vitis TCF services
+15:20:41 INFO  : XSCT server has started successfully.
+15:20:41 INFO  : Successfully done setting XSCT server connection channel  
+15:20:42 INFO  : plnx-install-location is set to ''
+15:20:42 INFO  : Successfully done setting workspace for the tool. 
+15:20:42 INFO  : Successfully done query RDI_DATADIR 
+15:22:48 INFO  : Result from executing command 'getProjects': target_control_zynq_platform
+15:22:48 INFO  : Result from executing command 'getPlatforms': 
+15:23:30 INFO  : Result from executing command 'getProjects': target_control_zynq_platform
+15:23:30 INFO  : Result from executing command 'getPlatforms': target_control_zynq_platform|/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/target_control_zynq_platform.xpfm
+15:28:41 INFO  : Checking for BSP changes to sync application flags for project 'zynq_hello_world'...
+15:36:13 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+15:36:14 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+15:36:14 INFO  : 'jtag frequency' command is executed.
+15:36:14 INFO  : Context for 'APU' is selected.
+15:36:15 INFO  : System reset is completed.
+15:36:18 INFO  : 'after 3000' command is executed.
+15:36:18 INFO  : Context for 'APU' is selected.
+15:36:18 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+15:36:18 INFO  : 'configparams force-mem-access 1' command is executed.
+15:36:18 INFO  : Context for 'APU' is selected.
+15:36:18 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl' is done.
+15:36:23 ERROR : Memory read error at 0xF8F00204. Invalid DAP IDCODE ffffffff. Invalid DAP ACK value: 7
+15:36:23 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl
+ps7_init
+----------------End of Script----------------
+
+15:36:23 ERROR : Memory read error at 0xF8F00204. Invalid DAP IDCODE ffffffff. Invalid DAP ACK value: 7
+15:36:53 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+15:36:54 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+15:36:54 INFO  : 'jtag frequency' command is executed.
+15:36:54 INFO  : Context for 'APU' is selected.
+15:36:54 INFO  : System reset is completed.
+15:36:57 INFO  : 'after 3000' command is executed.
+15:36:57 INFO  : Context for 'APU' is selected.
+15:36:57 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+15:36:57 INFO  : 'configparams force-mem-access 1' command is executed.
+15:36:57 INFO  : Context for 'APU' is selected.
+15:36:57 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl' is done.
+15:37:01 ERROR : Memory read error at 0xF8F00208. AP transaction timeout
+15:37:01 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl
+ps7_init
+----------------End of Script----------------
+
+15:37:01 ERROR : Memory read error at 0xF8F00208. AP transaction timeout
+15:37:09 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+15:37:09 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+15:37:09 INFO  : 'jtag frequency' command is executed.
+15:37:09 INFO  : Context for 'APU' is selected.
+15:37:09 ERROR : Cannot reset APU. APB AP transaction error, DAP status 0xF0000021
+15:37:09 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+----------------End of Script----------------
+
+15:37:09 ERROR : Cannot reset APU. APB AP transaction error, DAP status 0xF0000021
+15:44:25 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+15:44:25 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+15:44:25 INFO  : 'jtag frequency' command is executed.
+15:44:25 INFO  : Context for 'APU' is selected.
+15:44:25 INFO  : System reset is completed.
+15:44:28 INFO  : 'after 3000' command is executed.
+15:44:28 INFO  : Context for 'APU' is selected.
+15:44:28 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+15:44:28 INFO  : 'configparams force-mem-access 1' command is executed.
+15:44:28 INFO  : Context for 'APU' is selected.
+15:44:28 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl' is done.
+15:44:36 INFO  : 'ps7_init' command is executed.
+15:44:36 INFO  : 'ps7_post_config' command is executed.
+15:44:36 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+15:44:37 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/Debug/zynq_hello_world.elf' is downloaded to processor 'ps7_cortexa9_0'.
+15:44:38 INFO  : 'configparams force-mem-access 0' command is executed.
+15:44:38 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/Debug/zynq_hello_world.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+15:44:38 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+15:44:38 INFO  : 'con' command is executed.
+15:44:38 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+15:44:38 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world_system/_ide/scripts/debugger_zynq_hello_world-default.tcl'
+15:44:51 INFO  : Disconnected from the channel tcfchan#2.
+15:44:52 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+15:44:52 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+15:44:52 INFO  : 'jtag frequency' command is executed.
+15:44:52 INFO  : Context for 'APU' is selected.
+15:44:52 INFO  : System reset is completed.
+15:44:55 INFO  : 'after 3000' command is executed.
+15:44:55 INFO  : Context for 'APU' is selected.
+15:44:55 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+15:44:55 INFO  : 'configparams force-mem-access 1' command is executed.
+15:44:55 INFO  : Context for 'APU' is selected.
+15:44:55 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl' is done.
+15:45:02 INFO  : 'ps7_init' command is executed.
+15:45:03 INFO  : 'ps7_post_config' command is executed.
+15:45:03 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+15:45:04 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/Debug/zynq_hello_world.elf' is downloaded to processor 'ps7_cortexa9_0'.
+15:45:04 INFO  : 'configparams force-mem-access 0' command is executed.
+15:45:04 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world/Debug/zynq_hello_world.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+15:45:05 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+15:45:05 INFO  : 'con' command is executed.
+15:45:05 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+15:45:05 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world_system/_ide/scripts/debugger_zynq_hello_world-default.tcl'
+15:54:03 INFO  : Result from executing command 'getProjects': target_control_zynq_platform
+15:54:03 INFO  : Result from executing command 'getPlatforms': target_control_zynq_platform|/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/target_control_zynq_platform.xpfm
+15:54:33 INFO  : Result from executing command 'getProjects': target_control_zynq_platform
+15:54:33 INFO  : Result from executing command 'getPlatforms': target_control_zynq_platform|/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/target_control_zynq_platform.xpfm
+15:59:29 INFO  : Checking for BSP changes to sync application flags for project 'zynq_freertos_bringup'...
+16:00:29 INFO  : Disconnected from the channel tcfchan#3.
+16:00:30 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+16:00:30 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+16:00:30 ERROR : port closed
+16:00:30 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+----------------End of Script----------------
+
+16:00:30 ERROR : port closed
+16:25:43 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+16:26:01 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+----------------End of Script----------------
+
+16:26:01 ERROR : Could not find ARM device on the board for connection 'Local'.
+Check if the target is in:
+1. Split JTAG - No operations are possible with ARM DAP.
+2. Non JTAG bootmode - Bootrom may need time to enable DAP.
+Please try again.
+
+
+Troubleshooting hints:
+1. Check whether board is connected to system properly.
+2. In case of zynq board, check whether Digilent/Xilinx cable switch settings are correct.
+3. If you are using Xilinx Platform Cable USB, ensure that status LED is green.
+16:27:04 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+16:27:04 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+16:27:04 INFO  : 'jtag frequency' command is executed.
+16:27:04 INFO  : Context for 'APU' is selected.
+16:27:04 INFO  : System reset is completed.
+16:27:07 INFO  : 'after 3000' command is executed.
+16:27:07 INFO  : Context for 'APU' is selected.
+16:27:07 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+16:27:07 INFO  : 'configparams force-mem-access 1' command is executed.
+16:27:07 INFO  : Context for 'APU' is selected.
+16:27:07 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl' is done.
+16:27:14 INFO  : 'ps7_init' command is executed.
+16:27:14 INFO  : 'ps7_post_config' command is executed.
+16:27:14 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+16:27:17 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf' is downloaded to processor 'ps7_cortexa9_0'.
+16:27:18 INFO  : 'configparams force-mem-access 0' command is executed.
+16:27:18 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+16:27:18 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+16:27:18 INFO  : 'con' command is executed.
+16:27:18 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+16:27:18 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup_system/_ide/scripts/debugger_zynq_freertos_bringup-default.tcl'
+16:27:19 INFO  : Disconnected from the channel tcfchan#5.
+16:27:20 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+16:27:21 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+16:27:21 INFO  : 'jtag frequency' command is executed.
+16:27:21 INFO  : Context for 'APU' is selected.
+16:27:21 INFO  : System reset is completed.
+16:27:24 INFO  : 'after 3000' command is executed.
+16:27:24 INFO  : Context for 'APU' is selected.
+16:27:24 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+16:27:24 INFO  : 'configparams force-mem-access 1' command is executed.
+16:27:24 INFO  : Context for 'APU' is selected.
+16:27:24 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl' is done.
+16:27:31 INFO  : 'ps7_init' command is executed.
+16:27:31 INFO  : 'ps7_post_config' command is executed.
+16:27:31 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+16:27:34 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf' is downloaded to processor 'ps7_cortexa9_0'.
+16:27:35 INFO  : 'configparams force-mem-access 0' command is executed.
+16:27:35 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+16:27:35 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+16:27:35 INFO  : 'con' command is executed.
+16:27:35 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+16:27:35 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup_system/_ide/scripts/debugger_zynq_freertos_bringup-default.tcl'
+16:51:52 INFO  : Checking for BSP changes to sync application flags for project 'zynq_freertos_bringup'...
+16:52:41 INFO  : Disconnected from the channel tcfchan#6.
+16:52:42 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+16:52:51 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+----------------End of Script----------------
+
+16:52:51 ERROR : Could not find Jtag device on the board for connection 'Local'.
+
+
+Troubleshooting hints:
+1. Check whether board is connected to system properly.
+2. In case of zynq board, check whether Digilent/Xilinx cable switch settings are correct.
+3. If you are using Xilinx Platform Cable USB, ensure that status LED is green.
+16:53:27 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+16:53:27 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+16:53:27 INFO  : 'jtag frequency' command is executed.
+16:53:27 INFO  : Context for 'APU' is selected.
+16:53:27 INFO  : System reset is completed.
+16:53:30 INFO  : 'after 3000' command is executed.
+16:53:30 INFO  : Context for 'APU' is selected.
+16:53:30 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+16:53:30 INFO  : 'configparams force-mem-access 1' command is executed.
+16:53:30 INFO  : Context for 'APU' is selected.
+16:53:30 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl' is done.
+16:53:37 INFO  : 'ps7_init' command is executed.
+16:53:37 INFO  : 'ps7_post_config' command is executed.
+16:53:37 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+16:53:41 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf' is downloaded to processor 'ps7_cortexa9_0'.
+16:53:42 INFO  : 'configparams force-mem-access 0' command is executed.
+16:53:42 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+16:53:42 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+16:53:42 INFO  : 'con' command is executed.
+16:53:42 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+16:53:42 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup_system/_ide/scripts/debugger_zynq_freertos_bringup-default.tcl'
+17:15:44 INFO  : Disconnected from the channel tcfchan#7.
+17:15:45 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+17:15:45 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+17:15:45 INFO  : 'jtag frequency' command is executed.
+17:15:45 INFO  : Context for 'APU' is selected.
+17:15:45 INFO  : System reset is completed.
+17:15:48 INFO  : 'after 3000' command is executed.
+17:15:48 INFO  : Context for 'APU' is selected.
+17:15:48 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+17:15:48 INFO  : 'configparams force-mem-access 1' command is executed.
+17:15:48 INFO  : Context for 'APU' is selected.
+17:15:48 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl' is done.
+17:15:55 INFO  : 'ps7_init' command is executed.
+17:15:55 INFO  : 'ps7_post_config' command is executed.
+17:15:55 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+17:15:58 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf' is downloaded to processor 'ps7_cortexa9_0'.
+17:15:59 INFO  : 'configparams force-mem-access 0' command is executed.
+17:15:59 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+17:15:59 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+17:15:59 INFO  : 'con' command is executed.
+17:15:59 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+17:15:59 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup_system/_ide/scripts/debugger_zynq_freertos_bringup-default.tcl'
+17:18:03 INFO  : Disconnected from the channel tcfchan#8.
+17:18:04 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+17:18:04 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+17:18:04 ERROR : port closed
+17:18:04 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+----------------End of Script----------------
+
+17:18:04 ERROR : port closed
+17:18:09 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+17:18:09 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+17:18:09 INFO  : 'jtag frequency' command is executed.
+17:18:09 INFO  : Context for 'APU' is selected.
+17:18:09 INFO  : System reset is completed.
+17:18:12 INFO  : 'after 3000' command is executed.
+17:18:12 INFO  : Context for 'APU' is selected.
+17:18:12 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+17:18:12 INFO  : 'configparams force-mem-access 1' command is executed.
+17:18:12 INFO  : Context for 'APU' is selected.
+17:18:12 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl' is done.
+17:18:19 INFO  : 'ps7_init' command is executed.
+17:18:19 INFO  : 'ps7_post_config' command is executed.
+17:18:19 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+17:18:22 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf' is downloaded to processor 'ps7_cortexa9_0'.
+17:18:23 INFO  : 'configparams force-mem-access 0' command is executed.
+17:18:23 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+17:18:23 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+17:18:23 INFO  : 'con' command is executed.
+17:18:23 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+17:18:23 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup_system/_ide/scripts/debugger_zynq_freertos_bringup-default.tcl'
+17:18:43 INFO  : Checking for BSP changes to sync application flags for project 'zynq_freertos_bringup'...
+17:18:48 INFO  : Disconnected from the channel tcfchan#9.
+17:18:49 INFO  : Connected to target on host '127.0.0.1' and port '3121'.
+17:18:49 INFO  : Jtag cable 'Digilent Zybo Z7 210351B8086CA' is selected.
+17:18:49 INFO  : 'jtag frequency' command is executed.
+17:18:49 INFO  : Context for 'APU' is selected.
+17:18:49 INFO  : System reset is completed.
+17:18:52 INFO  : 'after 3000' command is executed.
+17:18:52 INFO  : Context for 'APU' is selected.
+17:18:52 INFO  : Hardware design and registers information is loaded from '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa'.
+17:18:52 INFO  : 'configparams force-mem-access 1' command is executed.
+17:18:52 INFO  : Context for 'APU' is selected.
+17:18:52 INFO  : Sourcing of '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl' is done.
+17:18:59 INFO  : 'ps7_init' command is executed.
+17:18:59 INFO  : 'ps7_post_config' command is executed.
+17:18:59 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+17:19:02 INFO  : The application '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf' is downloaded to processor 'ps7_cortexa9_0'.
+17:19:03 INFO  : 'configparams force-mem-access 0' command is executed.
+17:19:03 INFO  : ----------------XSDB Script----------------
+connect -url tcp:127.0.0.1:3121
+targets -set -nocase -filter {name =~"APU*"}
+rst -system
+after 3000
+targets -set -nocase -filter {name =~"APU*"}
+loadhw -hw /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/hw/target_control_zynq_hw.xsa -mem-ranges [list {0x40000000 0xbfffffff}] -regs
+configparams force-mem-access 1
+targets -set -nocase -filter {name =~"APU*"}
+source /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/_ide/psinit/ps7_init.tcl
+ps7_init
+ps7_post_config
+targets -set -nocase -filter {name =~ "*A9*#0"}
+dow /home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/Debug/zynq_freertos_bringup.elf
+configparams force-mem-access 0
+----------------End of Script----------------
+
+17:19:03 INFO  : Context for processor 'ps7_cortexa9_0' is selected.
+17:19:03 INFO  : 'con' command is executed.
+17:19:03 INFO  : ----------------XSDB Script (After Launch)----------------
+targets -set -nocase -filter {name =~ "*A9*#0"}
+con
+----------------End of Script----------------
+
+17:19:03 INFO  : Launch script is exported to file '/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup_system/_ide/scripts/debugger_zynq_freertos_bringup-default.tcl'

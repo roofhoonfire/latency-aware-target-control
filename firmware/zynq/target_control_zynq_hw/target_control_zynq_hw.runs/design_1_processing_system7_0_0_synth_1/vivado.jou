@@ -1,0 +1,13 @@
+#-----------------------------------------------------------
+# Vivado v2022.1 (64-bit)
+# SW Build 3526262 on Mon Apr 18 15:47:01 MDT 2022
+# IP Build 3524634 on Mon Apr 18 20:55:01 MDT 2022
+# Start of session at: Fri Aug 28 14:46:27 2026
+# Process ID: 42008
+# Current directory: /home/user/Desktop/latency-aware-target-control/firmware/zynq/target_control_zynq_hw/target_control_zynq_hw.runs/design_1_processing_system7_0_0_synth_1
+# Command line: vivado -log design_1_processing_system7_0_0.vds -product Vivado -mode batch -messageDb vivado.pb -notrace -source design_1_processing_system7_0_0.tcl
+# Log file: /home/user/Desktop/latency-aware-target-control/firmware/zynq/target_control_zynq_hw/target_control_zynq_hw.runs/design_1_processing_system7_0_0_synth_1/design_1_processing_system7_0_0.vds
+# Journal file: /home/user/Desktop/latency-aware-target-control/firmware/zynq/target_control_zynq_hw/target_control_zynq_hw.runs/design_1_processing_system7_0_0_synth_1/vivado.jou
+# Running On: ubuntu, OS: Linux, CPU Frequency: 2803.200 MHz, CPU Physical cores: 4, Host memory: 16721 MB
+#-----------------------------------------------------------
+source design_1_processing_system7_0_0.tcl -notrace

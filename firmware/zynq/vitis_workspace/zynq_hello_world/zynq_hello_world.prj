@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="ASCII"?>
+<sdkproject:SdkProject xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sdkproject="http://www.xilinx.com/sdkproject" name="zynq_hello_world" location="/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_hello_world" platform="/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/target_control_zynq_platform.xpfm" platformUID="xilinx:zybo-z7-10::0.0(custom)" systemProject="zynq_hello_world_system" sysConfig="target_control_zynq_platform" runtime="C/C++" cpu="standalone_domain" cpuInstance="ps7_cortexa9_0" os="standalone" mssSignature="4db30a6b826c4795351315b76c7c2523">
+  <configuration name="Debug" id="xilinx.gnu.armv7.exe.debug.1130593080">
+    <configBuildOptions xsi:type="sdkproject:SdkOptions"/>
+    <lastBuildOptions xsi:type="sdkproject:SdkOptions"/>
+  </configuration>
+  <configuration name="Release" id="xilinx.gnu.armv7.exe.release.901520519" dirty="true">
+    <configBuildOptions xsi:type="sdkproject:SdkOptions"/>
+  </configuration>
+  <template appTemplateName="hello_world"/>
+</sdkproject:SdkProject>

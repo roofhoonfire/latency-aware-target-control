@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<section name="Workbench">
+	<item key="sdx.custom.platform.repository.locations" value="/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform"/>
+	<item key="sdx.custom.platform.repository.last.directory.dialog.location" value="/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform"/>
+</section>

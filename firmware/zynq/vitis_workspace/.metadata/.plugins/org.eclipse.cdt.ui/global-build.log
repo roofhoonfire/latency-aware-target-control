@@ -1,0 +1,38 @@
+Nothing to build in platform 'target_control_zynq_platform'
+
+17:18:43 **** Clean-only build of configuration Debug for project zynq_freertos_bringup ****
+make clean 
+rm -rf ./src/freertos_hello_world.o ./src/steering_controller.o ./src/freertos_hello_world.d ./src/steering_controller.d zynq_freertos_bringup.elf.size  zynq_freertos_bringup.elf
+ 
+17:18:43 **** Incremental Build of configuration Debug for project zynq_freertos_bringup ****
+make all 
+make --no-print-directory pre-build
+a9-linaro-pre-build-step
+ 
+make --no-print-directory main-build
+Building file: ../src/main.c
+Invoking: ARM v7 gcc compiler
+arm-none-eabi-gcc -Wall -O0 -g3 -I"/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/src/common_include" -c -fmessage-length=0 -MT"src/main.o" -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -I/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/sw/target_control_zynq_platform/freertos_domain/bspinclude/include -MMD -MP -MF"src/main.d" -MT"src/main.o" -o "src/main.o" "../src/main.c"
+Finished building: ../src/main.c
+ 
+Building file: ../src/sg90_mapper.c
+Invoking: ARM v7 gcc compiler
+arm-none-eabi-gcc -Wall -O0 -g3 -I"/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/src/common_include" -c -fmessage-length=0 -MT"src/sg90_mapper.o" -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -I/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/sw/target_control_zynq_platform/freertos_domain/bspinclude/include -MMD -MP -MF"src/sg90_mapper.d" -MT"src/sg90_mapper.o" -o "src/sg90_mapper.o" "../src/sg90_mapper.c"
+Finished building: ../src/sg90_mapper.c
+ 
+Building file: ../src/steering_controller.c
+Invoking: ARM v7 gcc compiler
+arm-none-eabi-gcc -Wall -O0 -g3 -I"/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/zynq_freertos_bringup/src/common_include" -c -fmessage-length=0 -MT"src/steering_controller.o" -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -I/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/sw/target_control_zynq_platform/freertos_domain/bspinclude/include -MMD -MP -MF"src/steering_controller.d" -MT"src/steering_controller.o" -o "src/steering_controller.o" "../src/steering_controller.c"
+Finished building: ../src/steering_controller.c
+ 
+Building target: zynq_freertos_bringup.elf
+Invoking: ARM v7 gcc linker
+arm-none-eabi-gcc -mcpu=cortex-a9 -mfpu=vfpv3 -mfloat-abi=hard -Wl,-build-id=none -specs=Xilinx.spec -Wl,-T -Wl,../src/lscript.ld -L/home/user/Desktop/latency-aware-target-control/firmware/zynq/vitis_workspace/target_control_zynq_platform/export/target_control_zynq_platform/sw/target_control_zynq_platform/freertos_domain/bsplib/lib -o "zynq_freertos_bringup.elf" ./src/main.o ./src/sg90_mapper.o ./src/steering_controller.o   -lm -Wl,--start-group,-lxil,-lfreertos,-lgcc,-lc,--end-group
+Finished building target: zynq_freertos_bringup.elf
+ 
+Invoking: ARM v7 Print Size
+arm-none-eabi-size zynq_freertos_bringup.elf  |tee "zynq_freertos_bringup.elf.size"
+   text	   data	    bss	    dec	    hex	filename
+  86268	   3340	  88728	 178336	  2b8a0	zynq_freertos_bringup.elf
+Finished building: zynq_freertos_bringup.elf.size
+ 

@@ -149,3 +149,27 @@ add_test(
     NAME steering_controller_test
     COMMAND steering_controller_test
 )
+
+add_executable(
+    sg90_mapper_test
+    common/sg90_mapper_test.cpp
+)
+
+target_compile_options(
+    sg90_mapper_test
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    sg90_mapper_test
+    PRIVATE
+    actuator_service
+)
+
+add_test(
+    NAME sg90_mapper_test
+    COMMAND sg90_mapper_test
+)

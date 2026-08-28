@@ -57,3 +57,29 @@ target_link_libraries(
     PUBLIC
     m
 )
+
+add_library(
+    actuator_service
+    STATIC
+    src/sg90_mapper.c
+)
+
+target_include_directories(
+    actuator_service
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_compile_options(
+    actuator_service
+    PRIVATE
+    -Wall
+    -Wextra
+    -Wpedantic
+)
+
+target_link_libraries(
+    actuator_service
+    PUBLIC
+    m
+)

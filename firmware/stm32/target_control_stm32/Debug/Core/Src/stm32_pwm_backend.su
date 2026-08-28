@@ -1,0 +1,4 @@
+../Core/Src/stm32_pwm_backend.c:7:13:microseconds_to_counts	72	static
+../Core/Src/stm32_pwm_backend.c:41:6:stm32_pwm_backend_init	24	static
+../Core/Src/stm32_pwm_backend.c:66:6:stm32_pwm_backend_start	16	static
+../Core/Src/stm32_pwm_backend.c:80:6:stm32_pwm_backend_apply	24	static

@@ -27,6 +27,8 @@
 #include "protocol/uart_frame_validator.h"
 #include "control/target_state.h"
 #include "control/steering_controller.h"
+#include "actuator/sg90_mapper.h"
+#include "platform/stm32_pwm_backend.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,6 +40,22 @@
 /* USER CODE BEGIN PD */
 #define CONTROL_TASK_PERIOD_MS   20U
 #define TARGET_TIMEOUT_MS       400U
+/*
+ * TIM4 clock after prescaler:
+ * 6.25 MHz / (4 + 1) = 1.25 MHz
+ */
+#define TIM4_COUNTER_FREQUENCY_HZ   1250000U
+#define TIM4_MAX_PERIOD_COUNTS      65536U
+
+/*
+ * PROVISIONAL SG90 BRING-UP VALUES.
+ *
+ * These are NOT calibrated runtime requirements.
+ */
+#define SG90_PWM_PERIOD_US                  20000U
+#define SG90_NEGATIVE_LIMIT_PULSE_US        1200U
+#define SG90_CENTER_PULSE_US                1500U
+#define SG90_POSITIVE_LIMIT_PULSE_US        1800U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -93,11 +111,26 @@ volatile uint32_t controller_step_count = 0U;
 volatile float desired_steering_deg = 0.0F;
 
 
+
+
 //for time out debugging
 volatile uint32_t last_target_update_ms_debug = 0U;
 
 volatile uint8_t hold_before_timeout_seen = 0U;
 volatile uint8_t timeout_neutral_seen = 0U;
+
+//for PWM Debugging
+volatile uint8_t pwm_backend_init_success = 0U;
+volatile uint8_t pwm_backend_start_success = 0U;
+volatile uint8_t sg90_map_success = 0U;
+volatile uint8_t pwm_apply_success = 0U;
+
+volatile uint32_t pwm_period_us_debug = 0U;
+volatile uint32_t pwm_pulse_width_us_debug = 0U;
+volatile uint32_t pwm_ccr2_debug = 0U;
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -150,10 +183,7 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
-  if (HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2) != HAL_OK)
-  {
-      Error_Handler();
-  }
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -675,93 +705,189 @@ void StartControlTask(void *argument)
 {
   /* USER CODE BEGIN StartControlTask */
 
+    TargetState target = {0};
 
-	   TargetState target = {0};
+    const SteeringControllerConfig controller_config = {
+        .wheelbase_m = 2.8F,
+        .deadband_deg = 1.0F,
+        .steering_limit_deg = 30.0F,
+        .target_timeout_ms = TARGET_TIMEOUT_MS
+    };
 
-	    const SteeringControllerConfig controller_config = {
-	        .wheelbase_m = 2.8F,
-	        .deadband_deg = 1.0F,
-	        .steering_limit_deg = 30.0F,
-	        .target_timeout_ms = TARGET_TIMEOUT_MS
-	    };
+    SteeringController controller = {0};
 
-	    SteeringController controller = {0};
+    if (!steering_controller_init(
+            &controller,
+            &controller_config))
+    {
+        controller_init_success = 0U;
+        osThreadExit();
+    }
 
-	    if (!steering_controller_init(
-	            &controller,
-	            &controller_config))
-	    {
-	        controller_init_success = 0U;
-	        osThreadExit();
-	    }
+    controller_init_success = 1U;
 
-	    controller_init_success = 1U;
+    /*
+     * Provisional SG90 mapping.
+     *
+     * These pulse widths are bring-up fixtures only.
+     * Final values will be replaced after physical calibration.
+     */
+    const Sg90MapperConfig sg90_config = {
+        .steering_limit_deg = 30.0F,
+        .period_us = SG90_PWM_PERIOD_US,
+        .pulse_at_negative_limit_us =
+            SG90_NEGATIVE_LIMIT_PULSE_US,
+        .pulse_at_center_us =
+            SG90_CENTER_PULSE_US,
+        .pulse_at_positive_limit_us =
+            SG90_POSITIVE_LIMIT_PULSE_US
+    };
 
-	    uint32_t next_wake_tick =
-	        osKernelGetTickCount();
+    Stm32PwmBackend pwm_backend = {0};
 
-	    for (;;)
-	    {
-	        while (osMessageQueueGet(
-	                   targetCommandQueueHandle,
-	                   &target,
-	                   NULL,
-	                   0U) == osOK)
-	        {
-	            queue_received_target = target;
-	            queue_receive_success = 1U;
+    if (!stm32_pwm_backend_init(
+            &pwm_backend,
+            &htim4,
+            TIM_CHANNEL_2,
+            TIM4_COUNTER_FREQUENCY_HZ,
+            TIM4_MAX_PERIOD_COUNTS))
+    {
+        pwm_backend_init_success = 0U;
+        osThreadExit();
+    }
 
-	            const uint32_t target_update_ms =
-	                osKernelGetTickCount();
+    pwm_backend_init_success = 1U;
 
-	            controller_target_update_success =
-	                steering_controller_update_target(
-	                    &controller,
-	                    &target,
-	                    target_update_ms)
-	                ? 1U
-	                : 0U;
-	            // 디버깅용
-	            if (controller_target_update_success != 0U)
-	            {
-	                last_target_update_ms_debug = target_update_ms;
-	            }
-	        }
+    if (!stm32_pwm_backend_start(&pwm_backend))
+    {
+        pwm_backend_start_success = 0U;
+        osThreadExit();
+    }
 
-	        const uint32_t now_ms =
-	            osKernelGetTickCount();
+    pwm_backend_start_success = 1U;
 
-	        controller_now_ms = now_ms;
+    uint32_t next_wake_tick =
+        osKernelGetTickCount();
 
-	        desired_steering_deg =
-	            steering_controller_step(
-	                &controller,
-	                now_ms);
-	        	// 디버깅용
-	        if (last_target_update_ms_debug != 0U)
-	        {
-	            const uint32_t elapsed_since_target_ms =
-	                now_ms - last_target_update_ms_debug;
+    for (;;)
+    {
+        while (osMessageQueueGet(
+                   targetCommandQueueHandle,
+                   &target,
+                   NULL,
+                   0U) == osOK)
+        {
+            queue_received_target = target;
+            queue_receive_success = 1U;
 
-	            if ((elapsed_since_target_ms > 0U) &&
-	                (elapsed_since_target_ms < TARGET_TIMEOUT_MS) &&
-	                (desired_steering_deg != 0.0F))
-	            {
-	                hold_before_timeout_seen = 1U;
-	            }
+            const uint32_t target_update_ms =
+                osKernelGetTickCount();
 
-	            if ((elapsed_since_target_ms >= TARGET_TIMEOUT_MS) &&
-	                (desired_steering_deg == 0.0F))
-	            {
-	                timeout_neutral_seen = 1U;
-	            }
-	        }
-	        ++controller_step_count;
+            controller_target_update_success =
+                steering_controller_update_target(
+                    &controller,
+                    &target,
+                    target_update_ms)
+                    ? 1U
+                    : 0U;
 
-	        next_wake_tick += CONTROL_TASK_PERIOD_MS;
+            if (controller_target_update_success != 0U)
+            {
+                last_target_update_ms_debug =
+                    target_update_ms;
+            }
+        }
 
-	        osDelayUntil(next_wake_tick);
-	    }
+        const uint32_t now_ms =
+            osKernelGetTickCount();
+
+        controller_now_ms = now_ms;
+
+        desired_steering_deg =
+            steering_controller_step(
+                &controller,
+                now_ms);
+
+        ++controller_step_count;
+
+        /*
+         * Common steering semantics
+         *          ↓
+         * SG90-specific mapping
+         */
+        PwmCommand pwm_command = {0};
+
+        sg90_map_success =
+            sg90_mapper_map(
+                &sg90_config,
+                desired_steering_deg,
+                &pwm_command)
+                ? 1U
+                : 0U;
+
+        if (sg90_map_success != 0U)
+        {
+            pwm_period_us_debug =
+                pwm_command.period_us;
+
+            pwm_pulse_width_us_debug =
+                pwm_command.pulse_width_us;
+
+            /*
+             * Hardware-independent PwmCommand
+             *          ↓
+             * STM32 hardware backend
+             */
+            pwm_apply_success =
+                stm32_pwm_backend_apply(
+                    &pwm_backend,
+                    &pwm_command)
+                    ? 1U
+                    : 0U;
+
+            if (pwm_apply_success != 0U)
+            {
+                pwm_ccr2_debug =
+                    __HAL_TIM_GET_COMPARE(
+                        &htim4,
+                        TIM_CHANNEL_2);
+            }
+        }
+        else
+        {
+            pwm_apply_success = 0U;
+        }
+
+        /*
+         * Existing timeout verification instrumentation.
+         */
+        if (last_target_update_ms_debug != 0U)
+        {
+            const uint32_t elapsed_since_target_ms =
+                now_ms - last_target_update_ms_debug;
+
+            if ((elapsed_since_target_ms > 0U) &&
+                (elapsed_since_target_ms <
+                 TARGET_TIMEOUT_MS) &&
+                (desired_steering_deg != 0.0F))
+            {
+                hold_before_timeout_seen = 1U;
+            }
+
+            if ((elapsed_since_target_ms >=
+                 TARGET_TIMEOUT_MS) &&
+                (desired_steering_deg == 0.0F))
+            {
+                timeout_neutral_seen = 1U;
+            }
+        }
+
+        next_wake_tick +=
+            CONTROL_TASK_PERIOD_MS;
+
+        osDelayUntil(next_wake_tick);
+    }
+
   /* USER CODE END StartControlTask */
 }
 

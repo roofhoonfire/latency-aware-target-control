@@ -1,284 +1,186 @@
 # Latency-Aware Target Control
 
-## Project Description
+## Hardware-Independent Embedded Control Architecture
 
-Latency-Aware Target Control is an embedded system integration project that connects synthetic vehicle perception on MATLAB/Simulink with a Linux C++ application and an STM32F429 real-time controller.
+`latency-aware-target-control` is an embedded control integration project that explores how the same **hardware-independent control application** can be executed across heterogeneous embedded platforms.
 
-The current implementation establishes a continuous live data path from synthetic vision detection to `TargetCommand` reception inside a FreeRTOS `ControlTask`.
+The project originally started from a latency-aware target-control problem, but the current architecture has evolved toward a broader systems question:
 
-Valid target detections generated while Simulink is running are streamed to the Linux application over UDP, converted into application-level commands, transmitted to the STM32 over UART, validated, deserialized, and delivered through a FreeRTOS message queue.
+> **Can the same control application be reused without modification across different embedded processors, RTOS environments, timer peripherals, and hardware APIs?**
 
-A deterministic CSV replay path is also retained for reproducible testing and regression validation.
+The current reference platform is:
 
-Based on this validated live pipeline, the project is being extended toward end-to-end latency measurement and actuation-time-aligned target prediction.
+- **STM32F429I-DISC1**
+  - Cortex-M4
+  - FreeRTOS
+  - CMSIS-RTOS2
+  - STM32 HAL
 
-<p align="center">
-  <img src="docs/images/system_architecture.png"
-       alt="Latency-Aware Target Control System Architecture"
-       width="650">
-</p>
+The next portability target is:
 
-<p align="center">
-  <em>Live system architecture from synthetic vision sensing to Linux command generation and STM32/FreeRTOS control.</em>
-</p>
+- **Zybo Z7 / Zynq-7000 Processing System**
+  - Cortex-A9
+  - FreeRTOS or bare-metal runtime
+  - Platform-specific peripheral backend
 
-## Overview
-
-The system models a two-layer control architecture:
-
-* **Linux / High-Level Processing:** live perception input reception, command generation, protocol encoding, and UART transmission
-* **STM32 / Real-Time Local Control:** frame validation, command reconstruction, RTOS communication, and control-side execution
-
-A controlled vehicle scenario is generated using MATLAB/Simulink and Automated Driving Toolbox. `Vision Detection Generator` produces synthetic target detections with configurable measurement noise, detection probability, and false positives.
-
-For each valid target detection, the following state is extracted:
+The central design principle is to separate:
 
 ```text
-[time, x, y, vx, vy]
+What the application wants to do
+
+from
+
+How each hardware platform performs it
 ```
 
-The primary integration path operates online:
+The current STM32 implementation has completed the software path from synthetic perception to PWM timer command generation.
+
+---
+
+## Project Goal
+
+The primary project goal is:
+
+> Run the same Hardware-Independent Common Control Application on STM32F429 and Zynq-7000 PS without modifying the common control source code, and quantitatively verify functional and real-time equivalence.
+
+The project therefore focuses on three boundaries:
+
+1. **Communication boundary**
+   - UART / UDP / RTOS communication must not leak into control logic.
+
+2. **Control boundary**
+   - The Common Control Application operates only on semantic target state and time.
+
+3. **Actuator boundary**
+   - Steering semantics, servo mapping, and hardware PWM generation are separated into independent layers.
+
+The final portability target is:
+
+```text
+Same semantic input
+        ↓
+Same Common Control Application
+        ↓
+Same desired steering command
+        ↓
+Platform-independent actuator command
+        ↓
+Different hardware backends
+```
+
+---
+
+# System Architecture
+
+The current architecture is:
 
 ```text
 MATLAB / Simulink
-    ↓
 Synthetic Vision Detection
-    ↓
-Target Detection Filtering
-    ↓
-Live UDP Streaming
-    ↓
+        ↓
+Target Actor Filtering
+        ↓
+Live UDP
+        ↓
 Linux C++
-    ↓
+DetectionRecord
+        ↓
 TargetCommand
+        ↓
+UART Frame + CRC-16
+        ↓
+────────────────────────────────────────
+        Embedded Platform Boundary
+────────────────────────────────────────
+        ↓
+Platform Runtime / Communication
+UART RX
+RTOS Task
+Local Clock
+        ↓
+Common Protocol Layer
+Frame Validation
+CRC
+Deserialization
+        ↓
+TargetState
+        ↓
+────────────────────────────────────────
+Hardware-Independent Common Application
+────────────────────────────────────────
+        ↓
+Steering Controller
+        ↓
+Desired Steering Angle [deg]
+        ↓
+SG90 Actuator Mapping
+        ↓
+PwmCommand
+{ period_us, pulse_width_us }
+        ↓
+────────────────────────────────────────
+Platform-Specific PWM Backend
+────────────────────────────────────────
+        ↓
+STM32 TIM4_CH2 / PB7
+        ↓
+SG90 Servo
+```
+
+The important architectural boundary is:
+
+```text
+TargetState
     ↓
+Common Control Application
+    ↓
+Desired Steering Angle
+```
+
+The Common Control Application does **not** depend on:
+
+```text
 UART
-    ↓
-STM32F429 + FreeRTOS
-    ↓
-ControlTask
+DMA
+Interrupt
+FreeRTOS
+CMSIS-RTOS2
+Message Queue
+HAL_GetTick()
+STM32 HAL
+STM32 Timer APIs
+Zynq BSP
+PWM Registers
+SG90 electrical details
 ```
 
-The Linux application receives detections continuously, converts each valid record into a `TargetCommand`, serializes it into an 8-byte payload, encapsulates it in a CRC-16 protected UART frame, and transmits the resulting frame to the STM32.
+---
 
-On the STM32F429, `CommRxTask` validates and deserializes each frame before sending the reconstructed command through a CMSIS-RTOS2 message queue to `ControlTask`.
+# Simulation & Synthetic Perception
 
-A CSV-based input path is retained as a deterministic replay mode for protocol and integration testing.
+MATLAB/Simulink and Automated Driving Toolbox provide a controlled perception source.
 
-## Motivation / Problem Definition
+The scenario contains an ego vehicle and a moving target vehicle.
 
-A target position is valid when it is observed, but a physical actuator cannot respond at that same instant.
+`Vision Detection Generator` models a non-ideal perception sensor.
 
-In a distributed control system, target information passes through multiple stages before control is applied:
+## Sensor Configuration
 
-```text
-Perception
-    ↓
-High-Level Processing
-    ↓
-Command Generation
-    ↓
-Communication
-    ↓
-MCU Scheduling
-    ↓
-Control Execution
-    ↓
-Physical Actuation
-```
+| Parameter | Value |
+| --- | --- |
+| Detection probability | `0.70` |
+| False positives per image | `1.0` |
+| Measurement noise | Enabled |
+| Random seed | `42` |
+| Sensor update interval | `0.1 s` |
+| Coordinate system | Ego Cartesian |
 
-During this interval, a moving target continues to change its position. Therefore, a command generated directly from the latest detected position can already be stale when actuation occurs.
+The sensor therefore reproduces:
 
-```text
-Target state measured at t0
-        ↓
-Processing + Communication + Scheduling Delay
-        ↓
-Control applied at t0 + Δt
-```
-
-For a moving target:
-
-```text
-Target Position at t0 ≠ Target Position at t0 + Δt
-```
-
-This project treats the perception-to-actuation delay as a system-level control problem.
-
-The intended latency-aware strategy combines target position, target velocity, and measured latency to estimate the target state at the expected actuation time.
-
-```text
-Current Target Position
-        +
-Target Velocity
-        +
-Measured Latency
-        ↓
-Predicted Future Target Position
-        ↓
-Control Command
-```
-
-For a constant-velocity target, the basic prediction model is:
-
-```text
-x_future = x_detected + vx × Δt
-y_future = y_detected + vy × Δt
-```
-
-The final evaluation will compare:
-
-* **Baseline:** control using the latest detected target position
-* **Latency-Aware:** control using the predicted target position at the expected actuation time
-
-The effectiveness of the latency-aware approach will be evaluated quantitatively using tracking error.
-
-## System Architecture
-
-The system is divided into three functional layers.
-
-### 1. Simulation & Synthetic Sensing
-
-MATLAB/Simulink and Automated Driving Toolbox provide a controlled and reproducible perception source.
-
-The simulation layer generates:
-
-* Detection timestamp
-* Target position
-* Target velocity
-* Measurement noise
-* Probabilistic detections
-* False-positive detections
-
-`Vision Detection Generator` outputs a detection bus during simulation.
-
-The live extraction path selects the target vehicle using its actor ID and rejects false positives and detections belonging to other actors.
-
-Each valid target detection is reduced to:
-
-```text
-[time, x, y, vx, vy]
-```
-
-and streamed immediately to the Linux application.
-
-### 2. Linux High-Level Processing
-
-The Linux C++ application supports two perception input modes:
-
-```text
-Live Mode
-Simulink → UDP → UdpDetectionReceiver
-                       ↓
-                 DetectionRecord
-```
-
-```text
-Replay Mode
-CSV → DetectionCsvReader
-              ↓
-        DetectionRecord
-```
-
-Both paths produce the same internal `DetectionRecord`, allowing the protocol and control pipeline to remain independent of the perception input source.
-
-The Linux application is responsible for:
-
-* Receiving live synthetic detections
-* Supporting deterministic CSV replay
-* Converting physical coordinates into command units
-* Constructing sequential `TargetCommand` messages
-* Serializing commands into a fixed wire format
-* Encoding CRC-protected UART frames
-* Transmitting frames through a POSIX serial interface
-
-The current baseline uses the latest detected position without future-position compensation.
-
-Detection time and target velocity are retained for the latency-aware prediction stage.
-
-### 3. STM32 Real-Time Local Controller
-
-The STM32F429I-DISC1 runs FreeRTOS through CMSIS-RTOS2.
-
-Two tasks separate communication from control-side processing:
-
-* **`CommRxTask`**
-
-  * Receives UART frames
-  * Validates protocol fields and CRC
-  * Deserializes `TargetCommand`
-  * Sends commands to the RTOS message queue
-
-* **`ControlTask`**
-
-  * Waits for valid commands
-  * Receives them through `targetCommandQueue`
-  * Performs control-side processing
-
-This separation keeps high-level perception and command generation on Linux while the STM32 handles communication validation and real-time task execution.
-
-## Simulation & Synthetic Sensor
-
-The current simulation uses a constant-velocity scenario with an ego vehicle and a moving target vehicle.
-
-`Scenario Reader` provides the ground-truth actor states, while `Vision Detection Generator` models a non-ideal vision sensor.
-
-### Sensor Configuration
-
-| Parameter                   | Value         |
-| --------------------------- | ------------- |
-| Detection probability       | `0.70`        |
-| False positives per image   | `1.0`         |
-| Measurement noise           | Enabled       |
-| Random seed                 | `42`          |
-| Sensor update interval      | `0.1 s`       |
-| Detection coordinate system | Ego Cartesian |
-
-A fixed random seed is used to make the probabilistic sensor behavior reproducible.
-
-### Measurement Noise
-
-The synthetic measurement does not perfectly overlap the ground-truth target position.
-
-<p align="center">
-  <img src="docs/images/synthetic_sensor_validation_1.png"
-       alt="Synthetic vision sensor measurement noise"
-       width="750">
-</p>
-
-<p align="center">
-  <em>Ground-truth target and noisy synthetic vision detection.</em>
-</p>
-
-### False Positive
-
-The sensor can generate a detection where no target vehicle exists.
-
-<p align="center">
-  <img src="docs/images/synthetic_sensor_validation_2.png"
-       alt="Synthetic vision sensor false positive"
-       width="750">
-</p>
-
-<p align="center">
-  <em>False-positive detection generated independently of the actual target vehicle.</em>
-</p>
-
-### Missed Detection
-
-Because the detection probability is below `1.0`, the target can remain inside the sensor field of view without generating a corresponding detection.
-
-<p align="center">
-  <img src="docs/images/synthetic_sensor_validation_3.png"
-       alt="Synthetic vision sensor missed detection"
-       width="750">
-</p>
-
-<p align="center">
-  <em>Target vehicle present in the scenario while the synthetic detector misses the target.</em>
-</p>
-
-### Live Detection Extraction
+- Measurement noise
+- Probabilistic detection
+- False positives
+- Missed detections
 
 The target vehicle is identified using:
 
@@ -286,128 +188,90 @@ The target vehicle is identified using:
 targetActorId = 2
 ```
 
-For each sensor update, detections are filtered using `TargetIndex`.
+Detection filtering behavior:
 
 ```text
 TargetIndex < 0
-    → False Positive
+    → False positive
+    → Ignore
 
 TargetIndex != 2
+    → Other actor
     → Ignore
 
 TargetIndex == 2
-    → Valid Target Detection
+    → Valid target
 ```
 
-The selected detection contains:
-
-```text
-Measurement =
-[x, y, z, vx, vy, vz]
-```
-
-The live interface uses:
+For each valid detection:
 
 ```text
 [time, x, y, vx, vy]
 ```
 
-When the target is not detected, no target packet is transmitted for that sensor update.
+is extracted.
 
-This preserves the missed-detection behavior of the synthetic sensor instead of replacing missing observations with zero-valued measurements.
+If the target is not detected, **no packet is transmitted**.
 
-### Simulink-to-Linux Live Transport
-
-A lightweight Simulink `Python Code` block acts only as a transport adapter.
-
-It packs each valid target detection as:
+Missing detection is therefore represented by:
 
 ```text
-Little Endian
+No new TargetState update
+```
+
+rather than by a synthetic zero-valued target.
+
+---
+
+## Simulink → Linux UDP Transport
+
+The Simulink transport adapter sends:
+
+```text
 double × 5
 ```
 
+in Little Endian order.
+
 Packet layout:
 
-| Field       | Type     |    Size |
-| ----------- | -------- | ------: |
-| `time_sec`  | `double` | 8 bytes |
-| `target_x`  | `double` | 8 bytes |
-| `target_y`  | `double` | 8 bytes |
+| Field | Type | Size |
+| --- | --- | ---: |
+| `time_sec` | `double` | 8 bytes |
+| `target_x` | `double` | 8 bytes |
+| `target_y` | `double` | 8 bytes |
 | `target_vx` | `double` | 8 bytes |
 | `target_vy` | `double` | 8 bytes |
 
-Total UDP payload:
+Total payload:
 
 ```text
 40 bytes
 ```
 
-Transport endpoint:
+UDP endpoint:
 
 ```text
 Address : 127.0.0.1
 Port    : 51001
-Protocol: UDP
 ```
 
-The Python block performs transport only. Prediction, command generation, protocol encoding, and control logic remain in the Linux C++ and STM32 layers.
+The Python Code block inside Simulink acts only as a transport adapter.
 
-### CSV Replay
+It does not implement:
 
-The original extraction workflow is retained for deterministic replay.
+- Control logic
+- Protocol logic
+- Steering logic
+- Actuator logic
 
-Valid target detections can still be exported to:
+---
 
-```text
-simulation/simulink/target_detections.csv
-```
+# Linux Application
 
-with the format:
+The Linux C++ application supports two input modes.
 
-```text
-time_sec,target_x,target_y,target_vx,target_vy
-```
-
-This path provides a fixed perception input for regression testing independently of live sensor execution.
-
-## Linux / Protocol Design
-
-The Linux application forms the boundary between synthetic perception and the STM32 controller.
-
-### Detection Record
-
-Both live UDP input and CSV replay are converted into the same internal representation:
-
-| Field           | Description         | Unit |
-| --------------- | ------------------- | ---- |
-| `time_sec`      | Detection timestamp | s    |
-| `target_x_m`    | Detected X position | m    |
-| `target_y_m`    | Detected Y position | m    |
-| `target_vx_mps` | Detected X velocity | m/s  |
-| `target_vy_mps` | Detected Y velocity | m/s  |
-
-Example live detection:
-
-```text
-t=0.100
-x=5.147
-y=-0.972
-vx=5.226
-vy=0.768
-```
-
-### Detection Input Modes
-
-The Linux executable supports two input modes.
-
-**Live mode**
-
-```bash
-./build/pc/target_control_pc \
-    /dev/ttyACM0 \
-    --live
-```
+## Live Mode
 
 ```text
 Simulink
@@ -417,13 +281,7 @@ UdpDetectionReceiver
 DetectionRecord
 ```
 
-**CSV replay mode**
-
-```bash
-./build/pc/target_control_pc \
-    /dev/ttyACM0 \
-    simulation/simulink/target_detections.csv
-```
+## CSV Replay Mode
 
 ```text
 CSV
@@ -433,92 +291,99 @@ DetectionCsvReader
 DetectionRecord
 ```
 
-The live UDP receiver accepts the 40-byte detection packet, reconstructs the five Little Endian `double` values, and exposes the result as a `DetectionRecord`.
+Both input paths produce:
 
-### Coordinate Conversion
+```cpp
+struct DetectionRecord
+{
+    double time_sec;
+    double target_x_m;
+    double target_y_m;
+    double target_vx_mps;
+    double target_vy_mps;
+};
+```
 
-The command representation uses centimeters for target position.
+This keeps the downstream protocol path independent of the perception source.
+
+---
+
+# TargetCommand Transport Contract
+
+The existing UART protocol remains unchanged.
+
+```c
+typedef struct
+{
+    uint16_t sequence;
+    int16_t target_x;
+    int16_t target_y;
+    uint16_t prediction_ms;
+} TargetCommand;
+```
+
+Wire payload:
 
 ```text
-5.1475 m
-   ↓ × 100
-514.75 cm
-   ↓ round
+sequence       2 bytes
+target_x       2 bytes
+target_y       2 bytes
+prediction_ms  2 bytes
+──────────────────────
+Total          8 bytes
+```
+
+All multi-byte values use Little Endian encoding.
+
+Target position is converted from meters to centimeters:
+
+```text
+5.147 m
+    ↓ × 100
+514.7 cm
+    ↓ round
 515
 ```
 
-### TargetCommand
+The current control architecture uses only `target_x` and `target_y`.
 
-The application-level command shared between Linux and STM32 is:
+`sequence` remains useful protocol/debug metadata.
 
-| Field           | Type       |    Size | Description             |
-| --------------- | ---------- | ------: | ----------------------- |
-| `sequence`      | `uint16_t` | 2 bytes | Command sequence number |
-| `target_x`      | `int16_t`  | 2 bytes | Target X position       |
-| `target_y`      | `int16_t`  | 2 bytes | Target Y position       |
-| `prediction_ms` | `uint16_t` | 2 bytes | Prediction horizon      |
-
-The wire payload is fixed at 8 bytes:
+`prediction_ms` currently remains:
 
 ```text
-sequence      2 bytes
-target_x      2 bytes
-target_y      2 bytes
-prediction_ms 2 bytes
+0
 ```
 
-All multi-byte values are serialized in Little Endian order.
+and is not used by the Common Control Application.
 
-The current baseline does not apply future-position compensation:
+---
 
-```text
-prediction_ms = 0
-```
+# UART Frame
 
-Live mode assigns a new sequence number to each received target detection:
+`TargetCommand` is transmitted inside a CRC-protected frame.
 
-```text
-seq = 1, 2, 3, 4, ...
-```
-
-Example:
-
-```text
-sequence      = 1
-target_x      = 515
-target_y      = -97
-prediction_ms = 0
-```
-
-Serialized payload:
-
-```text
-01 00 03 02 9F FF 00 00
-```
-
-### UART Frame
-
-The serialized payload is encapsulated in a CRC-protected UART frame.
-
-| Field          | Value              |    Size |
-| -------------- | ------------------ | ------: |
-| SOF1           | `0xAA`             |  1 byte |
-| SOF2           | `0x55`             |  1 byte |
-| Version        | `0x01`             |  1 byte |
-| Message Type   | `0x01`             |  1 byte |
-| Payload Length | `0x08`             |  1 byte |
-| Payload        | `TargetCommand`    | 8 bytes |
-| CRC            | CRC-16/CCITT-FALSE | 2 bytes |
-
-```text
-SOF1 | SOF2 | Version | Type | Length | Payload | CRC
- AA     55      01      01      08      8 B      2 B
-```
+| Field | Value | Size |
+| --- | --- | ---: |
+| SOF1 | `0xAA` | 1 |
+| SOF2 | `0x55` | 1 |
+| Version | `0x01` | 1 |
+| Message Type | `0x01` | 1 |
+| Payload Length | `0x08` | 1 |
+| Payload | `TargetCommand` | 8 |
+| CRC | CRC-16/CCITT-FALSE | 2 |
 
 Total frame size:
 
 ```text
 15 bytes
+```
+
+Frame:
+
+```text
+SOF1 | SOF2 | Version | Type | Length | Payload | CRC
+ AA     55      01      01      08      8 B      2 B
 ```
 
 CRC configuration:
@@ -531,25 +396,13 @@ RefOut     = false
 XorOut     = 0x0000
 ```
 
-Known CRC test vector:
+Known test vector:
 
 ```text
 "123456789" → 0x29B1
 ```
 
-Validated frame example:
-
-```text
-AA 55 01 01 08 01 00 03 02 9F FF 00 00 5E 5A
-```
-
-Protocol encode/decode round-trip behavior is verified independently through host-side tests.
-
-The live runtime path therefore performs only the operations required for command transmission instead of repeating test-only decode and comparison work for every sensor update.
-
-### Serial Transport
-
-The Linux serial transport uses:
+Serial configuration:
 
 ```text
 Baud Rate : 115200
@@ -565,181 +418,575 @@ Typical device:
 /dev/ttyACM0
 ```
 
-In live mode, the serial device is opened once and reused across the continuous detection stream.
+---
+
+# Semantic TargetState Boundary
+
+A major architectural change was introduced between the communication layer and the control application.
+
+The UART protocol still transports:
 
 ```text
-Serial Open
-    ↓
-Receive Detection
-    ↓
-Build TargetCommand
-    ↓
-Encode UART Frame
-    ↓
-Transmit
-    ↓
-Receive Next Detection
-    ↓
-...
+TargetCommand
 ```
 
-The transport layer remains independent from the protocol layer. `SerialPort` handles raw byte transmission without interpreting `TargetCommand`, frame headers, or CRC fields.
+but the Common Control Application receives only:
 
-## STM32 / FreeRTOS Architecture
+```c
+typedef struct
+{
+    int16_t x_cm;
+    int16_t y_cm;
+} TargetState;
+```
 
-The STM32F429I-DISC1 acts as the real-time local controller.
-
-The receive path is:
+The runtime performs:
 
 ```text
-USART1
-  ↓
+TargetCommand
+    ↓
+Protocol Metadata Removal
+    ↓
+TargetState
+```
+
+Example:
+
+```text
+TargetCommand
+{
+    sequence      = 17,
+    target_x      = 515,
+    target_y      = -97,
+    prediction_ms = 0
+}
+
+        ↓
+
+TargetState
+{
+    x_cm = 515,
+    y_cm = -97
+}
+```
+
+This prevents protocol details from entering the control application.
+
+---
+
+# STM32 Runtime Architecture
+
+The STM32F429 uses FreeRTOS through CMSIS-RTOS2.
+
+The runtime contains two major tasks:
+
+```text
 CommRxTask
-  ↓
-UART Frame Validator
-  ↓
-TargetCommand Deserialize
-  ↓
+    ↓
 targetCommandQueue
-  ↓
+    ↓
 ControlTask
 ```
 
-### CommRxTask
-
-`CommRxTask` performs:
+Despite the historical queue name, the queue now stores:
 
 ```text
-HAL_UART_Receive()
+TargetState
+```
+
+not `TargetCommand`.
+
+Queue configuration:
+
+| Item | Configuration |
+| --- | --- |
+| Producer | `CommRxTask` |
+| Consumer | `ControlTask` |
+| Queue | `targetCommandQueue` |
+| Item Type | `TargetState` |
+| Capacity | `4` |
+| API | CMSIS-RTOS2 Message Queue |
+
+Current queue creation:
+
+```c
+targetCommandQueueHandle =
+    osMessageQueueNew(
+        4,
+        sizeof(TargetState),
+        &targetCommandQueue_attributes);
+```
+
+---
+
+## CommRxTask
+
+`CommRxTask` is responsible only for communication processing.
+
+```text
+UART Receive
     ↓
 Frame Validation
     ↓
-TargetCommand Deserialization
+CRC Validation
+    ↓
+TargetCommand Deserialize
+    ↓
+TargetState Mapping
     ↓
 osMessageQueuePut()
 ```
 
-The task receives complete 15-byte frames, validates them, reconstructs `TargetCommand`, and sends the commands to the RTOS message queue.
+`CommRxTask` does **not** modify controller state.
 
-It does not directly execute control logic.
+This maintains a single-owner control-state model.
 
-### ControlTask
+---
 
-`ControlTask` performs:
+## ControlTask
+
+`ControlTask` is the sole owner of the `SteeringController`.
+
+Current control period:
 
 ```text
-osMessageQueueGet()
-    ↓
-TargetCommand Receive
-    ↓
-Local Control Processing
+20 ms
 ```
 
-The task blocks until a new command becomes available.
+Control frequency:
 
-### Message Queue
+```text
+50 Hz
+```
 
-| Item      | Configuration             |
-| --------- | ------------------------- |
-| Producer  | `CommRxTask`              |
-| Consumer  | `ControlTask`             |
-| Queue     | `targetCommandQueue`      |
-| Item Type | `TargetCommand`           |
-| Capacity  | 4 commands                |
-| API       | CMSIS-RTOS2 Message Queue |
+The synthetic sensor updates every:
 
-Queue creation:
+```text
+100 ms
+```
+
+Therefore sensor arrival and control execution are intentionally decoupled.
+
+The task performs:
+
+```text
+Drain available TargetState messages
+        ↓
+controller_update_target()
+        ↓
+controller_step()
+        ↓
+Desired Steering Angle
+        ↓
+SG90 Mapper
+        ↓
+PwmCommand
+        ↓
+STM32 PWM Backend
+```
+
+The controller continues executing every 20 ms even when no new target detection arrives.
+
+---
+
+# Hardware-Independent Steering Controller
+
+The Common Steering Controller uses a Pure-Pursuit-inspired geometric steering calculation.
+
+Coordinate convention:
+
+```text
++x = Forward
++y = Left
+-y = Right
+-x = Behind
+```
+
+Steering convention:
+
+```text
+Positive = Left
+Negative = Right
+Zero     = Straight
+```
+
+The controller uses:
+
+```text
+Ld = sqrt(x² + y²)
+
+alpha = atan2(y, x)
+
+delta =
+    atan(
+        2 × L × sin(alpha)
+        ──────────────────
+               Ld
+    )
+```
+
+Equivalent form:
+
+```text
+delta =
+    atan(
+        2 × L × y
+        ───────────
+          x² + y²
+    )
+```
+
+where:
+
+```text
+L = wheelbase = 2.8 m
+```
+
+Current controller parameters:
+
+| Parameter | Value |
+| --- | ---: |
+| Wheelbase | `2.8 m` |
+| Steering deadband | `±1°` |
+| Steering saturation | `±30°` |
+| Target timeout | `400 ms` |
+| Control period | `20 ms` |
+
+---
+
+# Invalid / Missing Target Policy
+
+The controller distinguishes between:
+
+```text
+Protocol invalid
+```
+
+and:
+
+```text
+Semantic invalid
+```
+
+Protocol-invalid frames are discarded before reaching the Common Control Application.
+
+Examples:
+
+- Invalid SOF
+- Invalid protocol version
+- Invalid message type
+- Invalid payload length
+- CRC mismatch
+- Deserialize failure
+
+Semantic target validation happens inside the Common Control Application.
+
+Current invalid target rule includes:
+
+```text
+x <= 0
+```
+
+which rejects targets at or behind the ego vehicle.
+
+Behavior:
+
+```text
+Valid target
+    ↓
+Update last valid target
+    ↓
+Compute steering
+
+Invalid target
+    ↓
+Reject update
+    ↓
+Keep previous valid target
+
+No new valid target
+    ↓
+Hold last steering
+
+elapsed >= 400 ms
+    ↓
+Neutral steering
+    ↓
+0°
+```
+
+The timeout policy is therefore:
+
+```text
+Reject
+→ Hold Last
+→ Timeout
+→ Neutral
+```
+
+---
+
+# Common Controller API
+
+The application intentionally separates asynchronous target arrival from periodic control execution.
 
 ```c
-osMessageQueueNew(
-    4,
-    sizeof(TargetCommand),
-    &targetCommandQueue_attributes
-);
+bool steering_controller_update_target(
+    SteeringController *controller,
+    const TargetState *target,
+    uint32_t now_ms);
 ```
 
-The queue provides an explicit boundary between communication processing and control execution.
+and:
 
-### Frame Validation
-
-Before a command enters the control path, the frame is checked for:
-
-* Frame length
-* Start-of-frame bytes
-* Protocol version
-* Message type
-* Payload length
-* CRC-16
-
-Only a valid frame is deserialized and sent to `targetCommandQueue`.
-
-## End-to-End Data Flow
-
-The system now supports continuous live propagation of synthetic target detections.
-
-Example Linux live output:
-
-```text
-[LIVE] seq=1  t=0.100  pos=(5.147, -0.972)  cmd=(515, -97)  pred=0ms
-[LIVE] seq=2  t=0.200  pos=(5.629, -0.920)  cmd=(563, -92)  pred=0ms
-[LIVE] seq=3  t=0.300  pos=(6.209, -0.891)  cmd=(621, -89)  pred=0ms
+```c
+float steering_controller_step(
+    const SteeringController *controller,
+    uint32_t now_ms);
 ```
 
-For the first detection:
+Time acquisition is the responsibility of the platform runtime.
+
+The Common Controller receives:
 
 ```text
+now_ms
+```
+
+but does not call:
+
+```text
+HAL_GetTick()
+osKernelGetTickCount()
+xTaskGetTickCount()
+```
+
+itself.
+
+On the current STM32 runtime:
+
+```text
+FreeRTOS tick rate = 1 kHz
+```
+
+so:
+
+```text
+1 tick = 1 ms
+```
+
+and the runtime can pass `osKernelGetTickCount()` directly as `now_ms`.
+
+---
+
+# Actuator Abstraction
+
+The control application outputs only:
+
+```text
+Desired Steering Angle [deg]
+```
+
+The actuator path is separated into additional layers.
+
+```text
+Desired Steering Angle
+        ↓
+SG90 Mapper
+        ↓
+PwmCommand
+        ↓
+Platform PWM Backend
+```
+
+---
+
+## PwmCommand
+
+The generic PWM command is:
+
+```c
+typedef struct
+{
+    uint32_t period_us;
+    uint32_t pulse_width_us;
+} PwmCommand;
+```
+
+This type does not contain:
+
+```text
+STM32
+TIM4
+ARR
+CCR
+Prescaler
+Zynq
+SG90
+```
+
+It represents only the physical meaning of a PWM command.
+
+---
+
+# SG90 Mapper
+
+The SG90 mapper converts:
+
+```text
+Steering Angle [deg]
+```
+
+into:
+
+```text
+PWM Period [us]
+PWM Pulse Width [us]
+```
+
+The mapping is configurable.
+
+```c
+typedef struct
+{
+    float steering_limit_deg;
+
+    uint32_t period_us;
+
+    uint32_t pulse_at_negative_limit_us;
+    uint32_t pulse_at_center_us;
+    uint32_t pulse_at_positive_limit_us;
+} Sg90MapperConfig;
+```
+
+The mapper supports both physical mounting directions.
+
+For example:
+
+```text
+Negative steering
+    ↓
+Shorter pulse
+```
+
+or:
+
+```text
+Negative steering
+    ↓
+Longer pulse
+```
+
+can both be represented by configuration.
+
+The Common Steering Controller therefore never changes because of servo installation direction.
+
+---
+
+## SG90 Test Fixture
+
+Host tests currently use:
+
+```text
+-30° → 1200 us
+  0° → 1500 us
++30° → 1800 us
+```
+
+These values are **test fixtures only**.
+
+They are not yet the final calibrated SG90 runtime values.
+
+Final values will be determined after physical servo calibration.
+
+---
+
+# STM32 Generic PWM Backend
+
+The STM32 backend receives only:
+
+```text
+PwmCommand
+```
+
+and converts microseconds into timer counts.
+
+Current PWM resource:
+
+```text
+Timer   : TIM4
+Channel : CH2
+GPIO    : PB7
+```
+
+Current CubeMX bring-up configuration:
+
+```text
+Prescaler      = 4
+Counter Period = 24999
+PWM Pulse      = 1875
+PWM Mode       = PWM Mode 1
+Polarity       = High
+```
+
+The configured counter frequency is:
+
+```text
+1.25 MHz
+```
+
+which means:
+
+```text
+1 timer count = 0.8 us
+```
+
+Therefore:
+
+```text
+20,000 us
+    ↓
+25,000 counts
+    ↓
+ARR = 24,999
+```
+
+and:
+
+```text
+1,500 us
+    ↓
+1,875 counts
+    ↓
+CCR2 = 1,875
+```
+
+The backend is responsible for:
+
+```text
+period_us
+    ↓
+ARR
+
+pulse_width_us
+    ↓
+CCR
+```
+
+but does not know that the signal is controlling an SG90.
+
+---
+
+# Current Full STM32 Software Path
+
+The complete validated STM32 software path is:
+
+```text
+Simulink
+    ↓
 Synthetic Detection
-├── time = 0.100 s
-├── x    = 5.147 m
-├── y    = -0.972 m
-├── vx   = 5.226 m/s
-└── vy   = 0.768 m/s
-```
-
-Linux generates:
-
-```text
-TargetCommand
-├── sequence      = 1
-├── target_x      = 515
-├── target_y      = -97
-└── prediction_ms = 0
-```
-
-Serialized payload:
-
-```text
-01 00 03 02 9F FF 00 00
-```
-
-UART frame:
-
-```text
-AA 55 01 01 08 01 00 03 02 9F FF 00 00 5E 5A
-```
-
-On STM32:
-
-```text
-received_command
     ↓
-targetCommandQueue
-    ↓
-queue_received_command
-    ↓
-ControlTask
-```
-
-During live execution, STM32 debug observation confirms that received command sequence and target fields continue to update as new Simulink detections arrive.
-
-Validated live path:
-
-```text
-Synthetic Vision Detection
-    ↓
-Target Actor Filtering
-    ↓
-Live UDP
+UDP
     ↓
 Linux C++
     ↓
@@ -749,161 +996,438 @@ TargetCommand
     ↓
 UART Frame + CRC-16
     ↓
-STM32 CommRxTask
+STM32 UART
     ↓
-Frame Validation / Deserialization
+CommRxTask
     ↓
-FreeRTOS Message Queue
+Frame Validation
+    ↓
+TargetCommand Deserialize
+    ↓
+TargetState
+    ↓
+FreeRTOS Queue
     ↓
 ControlTask
+    ↓
+Common Steering Controller
+    ↓
+desired_steering_deg
+    ↓
+SG90 Mapper
+    ↓
+PwmCommand
+    ↓
+STM32 PWM Backend
+    ↓
+TIM4_CH2 / PB7
 ```
 
-## Validation
+---
 
-Validation is performed at the protocol, simulation, transport, and hardware-integration levels.
+# Deterministic Integration Validation
 
-### Host-Side Tests
+A deterministic CSV replay path is retained for regression testing.
 
-Host-side verification covers:
-
-* `TargetCommand` serialization / deserialization
-* CRC-16/CCITT-FALSE
-* UART frame encoding / decoding
-* UART frame validation
-* Linux serial transport
-
-### Synthetic Sensor Validation
-
-The simulation verifies:
-
-* Measurement noise
-* Probabilistic detection
-* False positives
-* Missed detections
-* Detection time / position / velocity extraction
-* Target actor filtering
-
-### Live UDP Transport Validation
-
-The Simulink-to-Linux transport was validated independently before integration into the main application.
-
-The validation sequence was:
+Example first detection:
 
 ```text
-Simulink Test Signals
-    ↓
-UDP
-    ↓
-Standalone Receiver
-    ↓
-Verify [time, x, y, vx, vy]
+time = 0.1 s
+x    ≈ 5.147 m
+y    ≈ -0.972 m
+vx   ≈ 5.226 m/s
+vy   ≈ 0.768 m/s
 ```
 
-followed by:
+Linux converts this to approximately:
 
 ```text
-Actual Vision Detection
-    ↓
-Target Actor Filtering
-    ↓
-UDP
-    ↓
-Linux C++ UdpDetectionReceiver
-    ↓
-DetectionRecord
+target_x = 515 cm
+target_y = -97 cm
 ```
 
-The C++ receiver successfully reconstructed the same live target detections previously available only through CSV replay.
-
-### End-to-End Hardware Validation
-
-The following image shows command integrity across the Linux host and the STM32/FreeRTOS queue boundary.
-
-<p align="center">
-  <img src="docs/images/e2e_validation.png"
-       alt="End-to-end validation from Linux host to STM32 FreeRTOS controller"
-       width="950">
-</p>
-
-<p align="center">
-  <em>Linux transmission and STM32/FreeRTOS reception of the same TargetCommand.</em>
-</p>
-
-Single-command integrity validation:
+The expected steering command is approximately:
 
 ```text
-Linux TargetCommand
-{ sequence=1, target_x=515, target_y=-97, prediction_ms=0 }
-
-            ↓ UART
-
-STM32 received_command
-{ sequence=1, target_x=515, target_y=-97, prediction_ms=0 }
-
-            ↓ FreeRTOS Queue
-
-queue_received_command
-{ sequence=1, target_x=515, target_y=-97, prediction_ms=0 }
+-11.x°
 ```
 
-Integration flags:
+The STM32 runtime was observed producing the expected negative steering value.
+
+This validates:
 
 ```text
-rx_complete             = 1
-queue_send_success      = 1
-queue_receive_success   = 1
-queue_data_match        = 1
+Known TargetState
+    ↓
+Common Controller
+    ↓
+Expected Steering Sign
+    ↓
+Expected Steering Magnitude
 ```
 
-Continuous live validation additionally confirmed that `received_command` and `queue_received_command` continue to update while Simulink is running.
+---
 
-Validation summary:
+# Hold / Timeout Validation
 
-| Verification                           | Result   |
-| -------------------------------------- | -------- |
-| Host protocol tests                    | **PASS** |
-| Synthetic sensor validation            | **PASS** |
-| Simulink live target extraction        | **PASS** |
-| Simulink → Linux UDP streaming         | **PASS** |
-| Linux C++ UDP reception                | **PASS** |
-| Continuous Linux command generation    | **PASS** |
-| Linux serial transmission              | **PASS** |
-| STM32 UART reception                   | **PASS** |
-| UART frame validation                  | **PASS** |
-| TargetCommand deserialization          | **PASS** |
-| FreeRTOS queue send / receive          | **PASS** |
-| Continuous command update inside STM32 | **PASS** |
+The runtime was also validated with a one-shot target update.
 
-Overall validated path:
+Observed behavior:
 
 ```text
-Simulink
-→ Live UDP
-→ Linux C++
-→ UART
-→ STM32
-→ FreeRTOS Queue
-→ ControlTask
+Valid target arrives
+    ↓
+Steering changes
+    ↓
+No new target
+    ↓
+Previous steering remains active
+    ↓
+400 ms timeout
+    ↓
+Steering returns to 0°
 ```
 
-**Result: PASS**
+Debug latches confirmed both:
 
-## Build & Run
+```text
+hold_before_timeout_seen = 1
+timeout_neutral_seen     = 1
+```
 
-### Build
+---
+
+# Actuation-Path Validation
+
+The complete software actuator chain was validated using STM32 debug values.
+
+```text
+desired_steering_deg
+        ↓
+sg90_mapper_map()
+        ↓
+pwm_period_us
+pwm_pulse_width_us
+        ↓
+stm32_pwm_backend_apply()
+        ↓
+TIM4 CCR2
+```
+
+This confirms software propagation from:
+
+```text
+Common Control Output
+```
+
+to:
+
+```text
+STM32 Timer Compare Command
+```
+
+Physical servo motion is intentionally treated as a separate hardware-validation checkpoint.
+
+---
+
+# Host-Side Tests
+
+The host test suite currently contains seven CTest targets.
+
+Coverage includes:
+
+### Protocol
+
+- `TargetCommand` serialization / deserialization
+- CRC-16/CCITT-FALSE
+- UART frame encoding
+- UART frame validation
+
+### Linux Transport
+
+- Serial transport behavior
+
+### Common Steering Controller
+
+- Center target
+- Positive / negative steering
+- Deadband
+- Positive / negative saturation
+- Invalid target rejection
+- Invalid target must not replace last valid target
+- Hold-last behavior
+- Exact timeout-to-neutral behavior
+- Invalid controller configuration
+
+### SG90 Mapper
+
+- Center mapping
+- Positive / negative limit
+- Linear interpolation
+- Out-of-range clamping
+- Reversed servo direction
+- Invalid configuration
+- Invalid arguments
+
+Current result:
+
+```text
+7 / 7 CTest targets PASS
+```
+
+---
+
+# Portability Validation Strategy
+
+The STM32 implementation is the reference implementation.
+
+The next phase will port the same Common Control Application to the Zynq-7000 Processing System.
+
+The intended architecture is:
+
+```text
+                 Common Control Application
+                           │
+           ┌───────────────┴───────────────┐
+           │                               │
+           ↓                               ↓
+     STM32 Runtime                    Zynq Runtime
+           │                               │
+      STM32 HAL                        Zynq BSP
+           │                               │
+      TIM4 / UART                    Platform PWM/UART
+```
+
+The Common Application must remain unchanged.
+
+---
+
+## Portability Metrics
+
+### 1. Common Application Modified LOC
+
+Target:
+
+```text
+STM32 → Zynq port
+
+Modified LOC in Common Control Application = 0
+```
+
+---
+
+### 2. Platform Dependencies
+
+The Common Application should contain:
+
+```text
+0 references
+```
+
+to:
+
+```text
+HAL_
+STM32
+Zynq
+FreeRTOS
+CMSIS
+xQueue
+osMessageQueue
+Timer registers
+Platform-specific #ifdef
+```
+
+---
+
+### 3. Functional Equivalence
+
+The same `TargetState` sequence will be replayed on:
+
+```text
+Host
+STM32
+Zynq
+```
+
+and the resulting steering commands compared.
+
+Metrics:
+
+```text
+Mean Absolute Error
+Maximum Absolute Error
+```
+
+Expected difference should remain within floating-point implementation tolerance.
+
+---
+
+### 4. PWM Equivalence
+
+Representative steering commands:
+
+```text
+-30°
+-15°
+  0°
++15°
++30°
+```
+
+will be converted to PWM commands.
+
+Measured physical pulse width will later be compared with the commanded pulse width.
+
+Metric:
+
+```text
+PWM Pulse Error
+=
+|Measured Pulse Width - Commanded Pulse Width|
+```
+
+Without a shaft encoder, this validates PWM signal equivalence rather than exact physical servo-angle equivalence.
+
+---
+
+### 5. Real-Time Execution
+
+The Common Control Application will be measured on both embedded platforms.
+
+Candidate metrics:
+
+```text
+controller_step() execution time
+P99 execution time
+Maximum execution time
+Deadline miss rate
+Control-loop jitter
+```
+
+The goal is not to prove that one platform is faster.
+
+The goal is:
+
+> Both platforms must execute the same control application within the same real-time control requirement.
+
+---
+
+# Repository Structure
+
+```text
+.
+├── common/
+│   ├── include/
+│   │   ├── protocol/
+│   │   │   ├── target_command.h
+│   │   │   ├── target_command_codec.h
+│   │   │   ├── uart_frame.h
+│   │   │   ├── uart_frame_codec.h
+│   │   │   ├── uart_frame_validator.h
+│   │   │   └── crc16.h
+│   │   │
+│   │   ├── control/
+│   │   │   ├── target_state.h
+│   │   │   └── steering_controller.h
+│   │   │
+│   │   └── actuator/
+│   │       ├── pwm_command.h
+│   │       └── sg90_mapper.h
+│   │
+│   └── src/
+│       ├── crc16.c
+│       ├── target_command_codec.c
+│       ├── uart_frame_codec.c
+│       ├── uart_frame_validator.c
+│       ├── steering_controller.c
+│       └── sg90_mapper.c
+│
+├── pc/
+│   ├── include/
+│   │   ├── input/
+│   │   │   ├── detection_record.h
+│   │   │   ├── detection_csv_reader.h
+│   │   │   └── udp_detection_receiver.h
+│   │   └── transport/
+│   │
+│   └── src/
+│       ├── detection_csv_reader.cpp
+│       ├── udp_detection_receiver.cpp
+│       ├── serial_port.cpp
+│       └── main.cpp
+│
+├── firmware/
+│   └── stm32/
+│       └── target_control_stm32/
+│           ├── Core/
+│           │   ├── Inc/
+│           │   │   ├── control/
+│           │   │   ├── actuator/
+│           │   │   └── platform/
+│           │   │       └── stm32_pwm_backend.h
+│           │   │
+│           │   └── Src/
+│           │       ├── main.c
+│           │       ├── steering_controller.c
+│           │       ├── sg90_mapper.c
+│           │       └── stm32_pwm_backend.c
+│           │
+│           └── target_control_stm32.ioc
+│
+├── simulation/
+│   └── simulink/
+│       ├── scenario_sensor_model.slx
+│       ├── constant_velocity_scenario.mat
+│       ├── extract_target_detections.m
+│       └── target_detections.csv
+│
+├── tests/
+│   ├── common/
+│   └── pc/
+│
+└── docs/
+    └── images/
+```
+
+Shared Common source files are reused by the STM32 firmware through project links rather than duplicated implementations.
+
+This maintains a single source of truth for:
+
+```text
+Protocol
+Target semantics
+Control algorithm
+Actuator mapping
+```
+
+---
+
+# Build & Run
+
+## Host Build
 
 ```bash
 cmake -S . -B build
 cmake --build build -j
 ```
 
-Run host-side tests:
+Run all host tests:
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-### Live Mode
+Expected current result:
+
+```text
+100% tests passed
+0 tests failed out of 7
+```
+
+---
+
+## Live Mode
 
 Open:
 
@@ -919,43 +1443,23 @@ Start the Linux application:
     --live
 ```
 
-The application opens the serial device and UDP receiver, then waits for live detections:
+Then run the Simulink model.
+
+Flow:
 
 ```text
-Input Mode       : LIVE UDP
-UDP Listen       : 127.0.0.1:51001
-Waiting for Simulink detections...
+Simulink
+→ UDP
+→ Linux
+→ UART
+→ STM32
 ```
 
-Run `scenario_sensor_model.slx`.
+---
 
-Each valid target detection is streamed directly to Linux and transmitted to the STM32:
+## CSV Replay Mode
 
-```text
-[LIVE] seq=1  t=0.100  pos=(5.147, -0.972)  cmd=(515, -97)  pred=0ms
-[LIVE] seq=2  t=0.200  pos=(5.629, -0.920)  cmd=(563, -92)  pred=0ms
-[LIVE] seq=3  t=0.300  pos=(6.209, -0.891)  cmd=(621, -89)  pred=0ms
-```
-
-### CSV Replay Mode
-
-For deterministic replay, run the Simulink model and extract the logged detections:
-
-```text
-Run scenario_sensor_model.slx
-    ↓
-Run extract_target_detections
-    ↓
-Generate target_detections.csv
-```
-
-Generated file:
-
-```text
-simulation/simulink/target_detections.csv
-```
-
-Run:
+For deterministic validation:
 
 ```bash
 ./build/pc/target_control_pc \
@@ -963,114 +1467,257 @@ Run:
     simulation/simulink/target_detections.csv
 ```
 
-CSV replay remains available for reproducible integration and regression testing.
+The current CSV mode is useful for:
 
-## Repository Structure
+- Regression testing
+- Known-input steering verification
+- STM32 debugger inspection
+- Actuator-path validation
+
+---
+
+## STM32 Build
+
+Open:
 
 ```text
-.
-├── common/
-│   ├── include/protocol/        # Shared protocol definitions
-│   └── src/                     # Shared protocol implementation
-│
-├── pc/
-│   ├── include/
-│   │   ├── input/
-│   │   │   ├── detection_record.h
-│   │   │   ├── detection_csv_reader.h
-│   │   │   └── udp_detection_receiver.h
-│   │   └── transport/           # Linux serial transport
-│   │
-│   └── src/
-│       ├── detection_csv_reader.cpp
-│       ├── udp_detection_receiver.cpp
-│       ├── serial_port.cpp
-│       └── main.cpp
-│
-├── simulation/
-│   └── simulink/                # Driving scenario and synthetic sensor model
-│
-├── tests/                       # Host-side unit tests
-│
-└── docs/
-    └── images/                  # Architecture and validation images
+firmware/stm32/target_control_stm32
 ```
 
-Protocol sources under `common/` are shared between the Linux host and STM32 firmware, maintaining a single source of truth for serialization, CRC, UART framing, and frame validation.
+in STM32CubeIDE.
 
-## Current Status
+Then:
 
-### Implemented
+```text
+Build
+→ Flash
+→ Debug
+→ Resume
+```
 
-* ✅ `TargetCommand` wire format
-* ✅ Serialization / deserialization
-* ✅ CRC-16/CCITT-FALSE
-* ✅ UART frame encoding / decoding / validation
-* ✅ Linux serial transport
-* ✅ Host-side unit tests
-* ✅ STM32 UART reception
-* ✅ FreeRTOS task scheduling
-* ✅ CMSIS-RTOS2 message queue communication
-* ✅ Driving scenario generation
-* ✅ Synthetic vision sensor integration
-* ✅ Measurement noise
-* ✅ Probabilistic detection
-* ✅ False-positive and missed detections
-* ✅ Detection time / position / velocity extraction
-* ✅ Live target actor filtering
-* ✅ Simulink → Linux live UDP streaming
-* ✅ Linux C++ UDP detection receiver
-* ✅ Deterministic CSV replay path
-* ✅ Continuous `DetectionRecord` → `TargetCommand` generation
-* ✅ Sequential live command transmission
-* ✅ Linux → UART → STM32 communication
-* ✅ STM32 frame validation and deserialization
-* ✅ `CommRxTask` → Message Queue → `ControlTask`
-* ✅ Continuous Simulink → Linux → STM32 → FreeRTOS validation
+Current STM32 timer resource:
 
-### In Progress
+```text
+TIM4_CH2
+PB7
+```
 
-* ⏳ End-to-end latency instrumentation
-* ⏳ Latency-aware future target prediction
-* ⏳ PWM / servo actuation
-* ⏳ Baseline vs. latency-aware tracking-error evaluation
+---
 
-## Roadmap
+# Current Status
 
-| Phase   | Description                                   | Status        |
-| ------- | --------------------------------------------- | ------------- |
-| Phase 1 | Communication Protocol & RTOS Path            | ✅ Complete    |
-| Phase 2 | Synthetic Sensor & Live Streaming Integration | ✅ Complete    |
-| Phase 3 | End-to-End Latency Instrumentation            | ⏳ In Progress |
-| Phase 4 | Latency-Aware Target Prediction               | ⏳ Planned     |
-| Phase 5 | PWM / Servo Actuation                         | ⏳ Planned     |
-| Phase 6 | Quantitative Baseline Comparison              | ⏳ Planned     |
+## Completed
 
-The final evaluation will compare baseline tracking error against latency-aware prediction under identical target-motion and latency conditions.
+- ✅ Shared `TargetCommand` protocol
+- ✅ Explicit Little Endian serialization
+- ✅ CRC-16/CCITT-FALSE
+- ✅ Generic UART frame encoding
+- ✅ UART frame validation
+- ✅ Linux POSIX serial transport
+- ✅ Simulink synthetic driving scenario
+- ✅ Vision Detection Generator
+- ✅ Detection noise / missed detections / false positives
+- ✅ Target actor filtering
+- ✅ Live Simulink → Linux UDP transport
+- ✅ Deterministic CSV replay
+- ✅ Linux `DetectionRecord`
+- ✅ Linux `TargetCommand` generation
+- ✅ Linux → STM32 UART communication
+- ✅ STM32 `CommRxTask`
+- ✅ FreeRTOS / CMSIS-RTOS2 queue
+- ✅ Semantic `TargetState` boundary
+- ✅ Hardware-independent Steering Controller
+- ✅ Pure-Pursuit-inspired steering
+- ✅ Steering deadband
+- ✅ Steering saturation
+- ✅ Invalid target rejection
+- ✅ Hold-last behavior
+- ✅ 400 ms timeout-to-neutral
+- ✅ 20 ms periodic `ControlTask`
+- ✅ Same Common Controller source cross-built for STM32
+- ✅ Live steering output on STM32
+- ✅ Deterministic expected steering validation
+- ✅ Generic `PwmCommand`
+- ✅ SG90 actuator mapper
+- ✅ Reversed servo-direction configuration
+- ✅ STM32 generic PWM backend
+- ✅ TIM4_CH2 / PB7 PWM timer bring-up
+- ✅ Common Controller → Mapper → PWM Backend integration
+- ✅ STM32 CCR update validation
+- ✅ 7 / 7 Host CTest targets passing
 
-## Tech Stack
+---
 
-### Embedded / Real-Time
+# Pending Hardware Validation
 
-* STM32F429I-DISC1
-* FreeRTOS
-* CMSIS-RTOS2
-* STM32 HAL
-* UART
+The STM32 software reference implementation is complete through PWM timer command generation.
 
-### Linux / Application
+The remaining physical actuator validation is:
 
-* C
-* C++17
-* CMake
-* CTest
-* Ubuntu Linux
-* POSIX Serial / `termios`
-* POSIX UDP Socket
+- ⏳ External regulated 5 V supply for SG90
+- ⏳ SG90 physical connection
+- ⏳ Neutral pulse calibration
+- ⏳ Safe positive / negative pulse-limit calibration
+- ⏳ Replacement of provisional SG90 pulse fixtures with measured values
+- ⏳ PB7 physical waveform measurement with oscilloscope or logic analyzer
+- ⏳ Physical servo movement validation
 
-### Simulation
+The current software test values:
 
-* MATLAB R2026a
-* Simulink
-* Automated Driving Toolbox
-* Python 3.10 — UDP transport adapter
+```text
+1200 us
+1500 us
+1800 us
+```
+
+must not be interpreted as final calibrated actuator requirements.
+
+---
+
+# Roadmap
+
+| Phase | Description | Status |
+| --- | --- | --- |
+| Phase 1 | Communication Protocol | ✅ Complete |
+| Phase 2 | Simulink Live Perception Integration | ✅ Complete |
+| Phase 3 | Semantic TargetState Boundary | ✅ Complete |
+| Phase 4 | Hardware-Independent Control Application | ✅ Complete |
+| Phase 5 | STM32 Runtime Integration | ✅ Complete |
+| Phase 6 | SG90 Mapping / Generic PWM Command | ✅ Complete |
+| Phase 7 | STM32 PWM Backend | ✅ Complete |
+| Phase 8 | STM32 Full Software Actuation Path | ✅ Complete |
+| Phase 9 | Physical SG90 Calibration / Measurement | ⏳ Pending |
+| Phase 10 | Zynq-7000 PS Runtime Port | ⏳ Planned |
+| Phase 11 | STM32 ↔ Zynq Functional Equivalence | ⏳ Planned |
+| Phase 12 | Real-Time / PWM Portability Evaluation | ⏳ Planned |
+
+---
+
+# Current Milestone
+
+The current validated reference path is:
+
+```text
+Synthetic Perception
+        ↓
+Linux High-Level Processing
+        ↓
+Shared Communication Protocol
+        ↓
+STM32 Platform Runtime
+        ↓
+Semantic TargetState
+        ↓
+Hardware-Independent Common Controller
+        ↓
+Desired Steering Angle
+        ↓
+Hardware-Independent SG90 Mapping
+        ↓
+Generic PwmCommand
+        ↓
+STM32 Platform PWM Backend
+        ↓
+TIM4_CH2 / PB7
+```
+
+The next major development phase is:
+
+```text
+Zybo Z7 / Zynq-7000 PS
+        ↓
+Platform Runtime
+        ↓
+Same TargetState
+        ↓
+Same Common Controller
+        ↓
+Same Actuator Mapping
+        ↓
+Zynq PWM Backend
+```
+
+The central portability requirement is:
+
+```text
+Common Control Application modification
+STM32 → Zynq
+
+= 0 LOC
+```
+
+---
+
+# Tech Stack
+
+## Embedded / Real-Time
+
+- STM32F429I-DISC1
+- Cortex-M4
+- FreeRTOS
+- CMSIS-RTOS2
+- STM32 HAL
+- UART
+- Hardware Timer / PWM
+
+## Target Portability Platform
+
+- Zybo Z7
+- Zynq-7000 Processing System
+- Cortex-A9
+- FreeRTOS or bare-metal runtime
+
+## Linux / Application
+
+- C
+- C++17
+- Ubuntu Linux
+- CMake
+- CTest
+- POSIX Serial / `termios`
+- POSIX UDP Socket
+
+## Simulation
+
+- MATLAB R2026a
+- Simulink
+- Automated Driving Toolbox
+- Python Code block for UDP transport
+
+---
+
+# Design Summary
+
+This project is no longer centered on a single MCU implementation.
+
+Its core engineering problem is the separation of:
+
+```text
+Application Semantics
+```
+
+from:
+
+```text
+Platform Mechanisms
+```
+
+The resulting architecture is:
+
+```text
+Platform-Specific Input Runtime
+        ↓
+Common Semantic Interface
+        ↓
+Common Control Application
+        ↓
+Common Actuator Semantics
+        ↓
+Platform-Specific Output Backend
+```
+
+The STM32F429 implementation now serves as the reference platform.
+
+The next step is to reproduce the same behavior on the Zynq-7000 Processing System while preserving the Common Control Application without source modification.
+
+<!-- Updated from the previous project README supplied in this conversation. :contentReference[oaicite:0]{index=0} -->

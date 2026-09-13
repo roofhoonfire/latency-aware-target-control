@@ -12,3 +12,7 @@ timestamp=[2026-08-28 16:51:52], mode=BUILD, duration=0:00:00.235, duration_ms=2
 timestamp=[2026-08-28 16:51:53], mode=BUILD, duration=0:00:00.507, duration_ms=507, data={name=zynq_freertos_bringup, configuration=Debug, clean_build=false}
 timestamp=[2026-08-28 17:18:43], mode=BUILD, duration=0:00:00.197, duration_ms=197, data={name=zynq_freertos_bringup, configuration=Debug, clean_build=true}
 timestamp=[2026-08-28 17:18:43], mode=BUILD, duration=0:00:00.451, duration_ms=451, data={name=zynq_freertos_bringup, configuration=Debug, clean_build=false}
+timestamp=[2026-09-13 19:22:33], mode=WORKBENCH_START, duration=0:00:08.239, duration_ms=8239, data={}
+timestamp=[2026-09-13 19:22:34], mode=PLATFORM_REPOSITORY_INIT, duration=0:00:00.152, duration_ms=152, data={}
+timestamp=[2026-09-13 19:22:35], mode=WORKBENCH_UI_INIT, duration=0:00:01.901, duration_ms=1901, data={editors_count=6, platform_editors_count=1, projects_count=6, platform_projects_count=1, active_platform_editor=false, projects=RemoteSystemsTempFiles,target_control_zynq_platform,zynq_freertos_bringup,zynq_freertos_bringup_system,zynq_hello_world,zynq_hello_world_system}
+timestamp=[2026-09-13 19:24:25], mode=BUILD, duration=0:00:00.618, duration_ms=618, data={name=zynq_freertos_bringup, configuration=Debug, clean_build=false}

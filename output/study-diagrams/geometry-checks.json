@@ -1,0 +1,16 @@
+{
+  "illustrative_example": {
+    "x_m": 5.0,
+    "y_m": 2.0,
+    "L_m": 2.8,
+    "R_m": 7.25,
+    "steering_deg": 21.116904664463398
+  },
+  "project_example": {
+    "x_m": 5.15,
+    "y_m": -0.97,
+    "L_m": 2.8,
+    "steering_deg": -11.188155695700083
+  },
+  "geometry_checks": "circle equation, target endpoint, perpendicular wheel, angle equality passed"
+}

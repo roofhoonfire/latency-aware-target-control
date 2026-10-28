@@ -1,3 +1,27 @@
+add_executable(uart_rx_stream_test common/uart_rx_stream_test.cpp)
+target_link_libraries(uart_rx_stream_test PRIVATE protocol_codec)
+add_test(NAME uart_rx_stream_test COMMAND uart_rx_stream_test)
+
+foreach(board IN ITEMS stm32 zynq)
+    if(board STREQUAL "stm32")
+        set(rx_source ../firmware/stm32/target_control_stm32/Core/Src/stm32_uart_rx.c)
+    else()
+        set(rx_source ../firmware/zynq/vitis_workspace/zynq_freertos_bringup/src/zynq_uart_rx.c)
+    endif()
+    add_executable(${board}_uart_rx_test platform/uart_rx_irq_test.cpp ${rx_source})
+    target_include_directories(${board}_uart_rx_test PRIVATE platform/fakes ../common/include)
+    if(board STREQUAL "stm32")
+        target_compile_definitions(${board}_uart_rx_test PRIVATE TEST_STM32)
+    endif()
+    add_test(NAME ${board}_uart_rx_test COMMAND ${board}_uart_rx_test)
+    add_test(NAME ${board}_uart_rx_allocation_failure
+             COMMAND ${board}_uart_rx_test allocation-failure)
+endforeach()
+
+add_executable(runtime_support_test common/runtime_support_test.cpp)
+target_link_libraries(runtime_support_test PRIVATE protocol_codec)
+add_test(NAME runtime_support_test COMMAND runtime_support_test)
+
 add_executable(
     target_command_codec_test
     common/target_command_codec_test.cpp

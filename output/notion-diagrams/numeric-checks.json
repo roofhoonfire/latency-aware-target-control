@@ -1,0 +1,12 @@
+{
+  "angle_deg": -11.188155695700083,
+  "pulse_us": 1388,
+  "frame_hex": "AA 55 01 01 08 01 00 03 02 9F FF 00 00 5E 5A",
+  "crc_hex": "0x5a5e",
+  "period_counts": 25000,
+  "ARR": 24999,
+  "CCR2": 1735,
+  "uart_bits": 150,
+  "uart_time_ms": 1.3020833333333333,
+  "checked_text_boxes": 277
+}

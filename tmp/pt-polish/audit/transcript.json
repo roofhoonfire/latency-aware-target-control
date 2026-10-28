@@ -1,0 +1,268 @@
+{
+  "source": "C:/Users/threh/Downloads/미사일시스템SW_이장훈.pdf",
+  "basis": "Visual audit of tmp/pdfs/final-1.png through final-4.png. Text extraction verifies retyped overlays only; all other wording is rasterized.",
+  "slide1_left": [
+    [
+      "미사일시스템 SW 직무 자기소개"
+    ],
+    [
+      "2026년 하반기",
+      "신입 / 전문연구원 채용 면접"
+    ],
+    [
+      "3 KEYWORDS"
+    ],
+    [
+      "설계 검증 완수"
+    ]
+  ],
+  "slide2_left": [
+    [
+      "#1 이기종 제어 프로젝트"
+    ],
+    [
+      "책임 분리로",
+      "공통 로직 재사용"
+    ],
+    [
+      "STM32·Zynq의 플랫폼 의존부 분리",
+      "공통 제어·매핑 로직의 무수정 재사용"
+    ],
+    [
+      "01 LIG와 다양화"
+    ],
+    [
+      "제품 다양화"
+    ],
+    [
+      "임무 다양화"
+    ],
+    [
+      "연동 다양화"
+    ],
+    [
+      "분석",
+      "공통 기능과 변경되는 플랫폼 기능의 경계를 명확히 하는 설계 역량"
+    ]
+  ],
+  "slide3_left": [
+    [
+      "#2 야지 자율주행 UGV",
+      "- LIG D&A The SSEN 임베디드 SW스쿨 최종 프로젝트"
+    ],
+    [
+      "프로젝트 조건에 맞춘",
+      "알고리즘 적용 설계·검증"
+    ],
+    [
+      "알고리즘 특성과 운용 조건을 분석한",
+      "GPP·LPP 연산 부담 및 역할 이관 기준 설계"
+    ],
+    [
+      "01 GPP·LPP"
+    ],
+    [
+      "02 분담 경계를",
+      "바꾸는 조건"
+    ],
+    [
+      "계획",
+      "주요 역할"
+    ],
+    [
+      "GPP",
+      "목적지까지 큰 경로 탐색"
+    ],
+    [
+      "LPP",
+      "주변·차량 제약내",
+      "속도·조향 계산"
+    ],
+    [
+      "1",
+      "차량 속도"
+    ],
+    [
+      "2",
+      "지도 변화의 지속성"
+    ],
+    [
+      "3",
+      "하드웨어 계산 여유"
+    ],
+    [
+      "목표",
+      "'저속' · '야지' 에서 누가·언제·얼마나 계산할 것인가"
+    ]
+  ],
+  "slide4": [
+    [
+      "#3 개인 사업 · 지속적인 팀워크와 실행"
+    ],
+    [
+      "팀과 이어온 기획을",
+      "실제 결과물로"
+    ],
+    [
+      "2023~2026 피드백에 맞춰 바꾸며",
+      "수상·전시·후속 개발 까지 이어간 경험"
+    ],
+    [
+      "01 오랜 협업으로 완성하는 방산 개발"
+    ],
+    [
+      "천궁-II 개발",
+      "2012 착수 ~ 2017 전투용 적합"
+    ],
+    [
+      "약 5년"
+    ],
+    [
+      "02 팀과 함께 이어 온 개발"
+    ],
+    [
+      "2023"
+    ],
+    [
+      "소프트웨어학과 졸업작품 은상",
+      "\"지킬&하이드&시크\""
+    ],
+    [
+      "2025"
+    ],
+    [
+      "2025 G-STAR BTB관 전시작",
+      "\"노이 : 릴리스 11\""
+    ],
+    [
+      "2026"
+    ],
+    [
+      "게임벤처 4.0 선정",
+      "\"마더 그레이 : 노이\""
+    ],
+    [
+      "03 피드백과 프로젝트 피벗"
+    ],
+    [
+      "G-STAR 미팅"
+    ],
+    [
+      "퍼블리셔·서드파티·개발사 등의 총 25개 사와 미팅(일부 영어) 진행",
+      "PVP 운영·서비스 부담을 확인"
+    ],
+    [
+      "프로젝트 피벗"
+    ],
+    [
+      "운영 부담과 팀의 IP 유지 요구를 함께 검토, IP 보존의 싱글플레이 전환에 합의",
+      "합의한 기획을 바탕으로 후속 PVE 게임 버티컬 슬라이스 개발"
+    ],
+    [
+      "기여",
+      "장기 개발에서도 팀과 변경을 조율하며, 맡은 SW의 구현과 검증을 끝까지 이어나가는 개발자"
+    ]
+  ],
+  "preservation_risks": [
+    "The text layer is incomplete: all slide4 text and main headings/left-panel text on other slides are rasterized.",
+    "Slide4 game screenshots contain small in-game text; preserve images rather than attempt transcription or replacement.",
+    "Slide4 천궁 label uses a roman II shape visually; confirm original typography if rebuilding. The visual appears 천궁-II 개발, not 천궁-11.",
+    "Do not fix wording/spelling/spacing that looks awkward: 후속 개발 까지, 제약내, SW스쿨, 우회통신, 띄어쓰기 must be retained if visually present.",
+    "Existing source screenshot and diagram labels include visible font sizes much smaller than body text; moving text may require maintaining line breaks with per-block fixed line arrays.",
+    "All pages share LIG Defense&Aerospace top-right logo and navy top band; preserve logo image as asset.",
+    "Prior overlay script uses exact Unicode symbols minus U+2212, multiplication ×, mu μ, subscript ᵢ and ₚ. Avoid converting symbols during retyping."
+  ],
+  "slide2_right_raster_headings_footers": [
+    [
+      "02 책임 분리 기반의 공통 제어 로직 재사용 구조"
+    ],
+    [
+      "판단",
+      "보드·서보 변경이 제어식 수정으로 번지지 않도록, 조향각·PWM 명령을 경계로 책임을 분리"
+    ],
+    [
+      "03 이기종 제어 데이터 흐름"
+    ],
+    [
+      "04 공통 제어·매핑의 무수정 이식 결과"
+    ]
+  ],
+  "slide3_right_raster_headings_footers": [
+    [
+      "03 시험 환경과 비교 조건"
+    ],
+    [
+      "맵 4 LPP 알고리즘 선정 시험"
+    ],
+    [
+      "맵 10 본 시험"
+    ],
+    [
+      "이관 규칙 후보 D = B + 신규 차단 감지 · 조건부 GPP 이관"
+    ],
+    [
+      "04 비교 조건을 보완한 순차 실험"
+    ],
+    [
+      "05 조건을 반영한 원호 선택"
+    ],
+    [
+      "안전 검사"
+    ],
+    [
+      "충돌·미관측·차량 제약 위반 후보 제외"
+    ],
+    [
+      "원호 평가"
+    ],
+    [
+      "여유 부족과 GPP 경로 편차를 함께 평가"
+    ],
+    [
+      "Wp =",
+      "0.04 선택"
+    ],
+    [
+      "06 비교 결과와 적용 판정"
+    ],
+    [
+      "맵9 시간·여유 목표 미달 → D 최종 적용 보류"
+    ],
+    [
+      "결론",
+      "저속 야지·Pi 연산 제약에 맞춰 GPP·LPP 역할 이관을 설계하고, 완주·장애물 여유·계산 지연으로 적용 가능성을 평가"
+    ]
+  ],
+  "slide3_goal_exact": [
+    "목표",
+    "'저속' · '야지' 에서 누가·언제·얼마나 계산할 것인가"
+  ],
+  "slide3_right_overlay_captions_and_footnotes": [
+    [
+      "4개 알고리즘 별, 두 임무 총 40회 유효 완주"
+    ],
+    [
+      "표시 영역은 시험용 비용지도 교란"
+    ],
+    [
+      "PC: Gazebo·인지·GPP  /  Raspberry Pi 4: LPP"
+    ],
+    [
+      "dᵢ: 차체 외곽과 관측 차단셀의 거리 / eᵢ: GPP 경로 편차"
+    ],
+    [
+      "3개 후보 × 각 5회, 총 15회 비교 평균 시간·양 장치 CPU가 낮은 절충값"
+    ],
+    [
+      "맵10 비용지도 교란 · 4조건 × 2사건 × 3회 = 24회 · Pi 4 연산"
+    ],
+    [
+      "C도 6/6 완주 · 완주 외 성과 평균(A·B 지속 n=2) · 여유는 지도상 거리"
+    ]
+  ],
+  "additional_visual_checks": [
+    "Enlarged slide3-footer-symbol-detail.png confirms footer GPP·LPP uses centered middle dot, not period.",
+    "Enlarged slide3-goal-detail.png confirms BOTH 저속 and 야지 have single quotes, and source has a visible space between closing 야지 quote and 에서.",
+    "Enlarged slide4-year-detail.png confirms 2012 착수 ~ 2017 전투용 적합."
+  ]
+}

@@ -8,6 +8,15 @@ The project connects MATLAB/Simulink synthetic perception to a Linux C++ applica
 
 > **Take 11 milestone — 2026-08-28:** Zybo Z7-10 PS with FreeRTOS successfully ran the exact shared common controller and SG90 mapper via symlink, with zero common-source modifications.
 
+> **2026-10-19 source update (board validation pending):** Zynq now has a live
+> UART input, a semantic-input queue, and periodic control execution. Both boards
+> now use IRQ-fed byte queues and blocking receive tasks, preserving the two
+> application tasks and unchanged common controller/mapper sources.
+> Both runtimes include debugger-only timing traces and numeric/visual export
+> tooling. The Take 11 hardware results below remain historical evidence;
+> they do not validate this new firmware. See [IRQ validation](docs/uart_interrupt_validation.md)
+> and [measurement procedure](docs/runtime_measurement.md).
+
 ## 1. Results at a Glance
 
 | Item                                        | Verified result                                                             |
@@ -248,7 +257,8 @@ The reference platform is **STM32F429I-DISC1**, using FreeRTOS through CMSIS-RTO
 
 | Component            | Responsibility                                                                                            |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
-| `CommRxTask`         | Receive UART data, invoke frame decoding, map commands to `TargetState`, and enqueue updates              |
+| UART IRQ + byte queue | Store received bytes with continuity markers; wake the receive task; no frame/control work in IRQ |
+| `CommRxTask`         | Block on byte queue, invoke frame decoding, map commands to `TargetState`, and enqueue updates              |
 | `targetCommandQueue` | Transport `TargetState` objects between tasks                                                             |
 | `ControlTask`        | Own controller state, process target updates, evaluate steering, map PWM commands, and invoke the backend |
 

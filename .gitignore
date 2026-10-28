@@ -11,3 +11,7 @@ build/
 
 # Generated runtime logs
 results/logs/*.csv
+
+# Python tooling caches
+__pycache__/
+*.pyc

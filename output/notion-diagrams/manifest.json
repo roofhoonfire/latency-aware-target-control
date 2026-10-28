@@ -1,0 +1,90 @@
+[
+  {
+    "block_id": 0,
+    "filename": "01-end-to-end.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\01-end-to-end.png",
+    "caption": "전체 데이터 흐름. STM32는 PWM을 출력하고, 현재 Zynq 구현은 공통 계산 결과를 기록한다.",
+    "width": 1600,
+    "height": 2030
+  },
+  {
+    "block_id": 8,
+    "filename": "02-linux-encoding.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\02-linux-encoding.png",
+    "caption": "Linux 송신 호출 흐름. 8바이트 직렬화와 15바이트 프레임 포장은 서로 다른 단계다.",
+    "width": 1600,
+    "height": 1270
+  },
+  {
+    "block_id": 9,
+    "filename": "03-frame-layout.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\03-frame-layout.png",
+    "caption": "UART 응용 프레임 15바이트 = 헤더 5 + 페이로드 8 + CRC 2. 페이로드의 네 필드는 각각 16비트다.",
+    "width": 1600,
+    "height": 1030
+  },
+  {
+    "block_id": 10,
+    "filename": "04-frame-bytes.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\04-frame-bytes.png",
+    "caption": "검산한 예제 프레임. CRC는 SOF와 CRC 자체를 제외한 11바이트를 계산하며, 결과 0x5A5E를 5E 5A로 저장한다.",
+    "width": 1600,
+    "height": 1160
+  },
+  {
+    "block_id": 11,
+    "filename": "05-uart-8n1.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\05-uart-8n1.png",
+    "caption": "0xAA의 실제 비트 순서와 8N1 구성. 응용 프레임 15바이트는 문자 15개, 선로에서는 시작·정지 비트를 포함해 150비트다.",
+    "width": 1600,
+    "height": 1160
+  },
+  {
+    "block_id": 19,
+    "filename": "06-steering-calculation.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\06-steering-calculation.png",
+    "caption": "공통 제어기의 좌표 계산 예시. deadband와 제한은 각도의 절댓값으로 판단하며, 이 입력에서는 계산 결과가 유지된다.",
+    "width": 1600,
+    "height": 1030
+  },
+  {
+    "block_id": 20,
+    "filename": "07-angle-to-pulse.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\07-angle-to-pulse.png",
+    "caption": "현재 매퍼 설정의 각도와 HIGH 폭 관계. -30°는 1200μs, 0°는 1500μs, +30°는 1800μs이며 반복 주기는 20ms다.",
+    "width": 1600,
+    "height": 1150
+  },
+  {
+    "block_id": 23,
+    "filename": "08-timer-counts.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\08-timer-counts.png",
+    "caption": "TIM4 입력 6.25MHz를 PSC+1=5로 나누어 1.25MHz로 센다. 주기에는 ARR+1 관계를, HIGH 폭에는 CCR2를 적용한다.",
+    "width": 1600,
+    "height": 1220
+  },
+  {
+    "block_id": 26,
+    "filename": "09-pwm-waveform.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\09-pwm-waveform.png",
+    "caption": "계산상 예상 파형이며 실측이 아니다. HIGH 폭 1.388ms와 반복 주기 20ms를 시간축 비율에 맞추어 표시했다.",
+    "width": 1600,
+    "height": 1130
+  },
+  {
+    "block_id": 27,
+    "filename": "10-zynq-boundary.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\10-zynq-boundary.png",
+    "caption": "Zynq의 구현 범위. 공통 제어기와 매퍼의 결과를 기록하지만 물리 PWM 핀 출력 단계는 없다.",
+    "width": 1600,
+    "height": 1110
+  },
+  {
+    "block_id": 28,
+    "filename": "11-value-journey.png",
+    "path": "C:\\Github\\latency-aware-target-control\\output\\notion-diagrams\\11-value-journey.png",
+    "caption": "동일 예제의 값 변화. 페이로드 8바이트, 응용 프레임 15바이트, 선로의 150비트를 구분하고 플랫폼별 마지막 단계를 나눴다.",
+    "width": 1600,
+    "height": 1810
+  }
+]

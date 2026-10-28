@@ -1,0 +1,39 @@
+{
+  "slide2_right_raster_headings_footers": [
+    ["02 책임 분리 기반의 공통 제어 로직 재사용 구조"],
+    ["판단", "보드·서보 변경이 제어식 수정으로 번지지 않도록, 조향각·PWM 명령을 경계로 책임을 분리"],
+    ["03 이기종 제어 데이터 흐름"],
+    ["04 공통 제어·매핑의 무수정 이식 결과"]
+  ],
+  "slide3_right_raster_headings_footers": [
+    ["03 시험 환경과 비교 조건"],
+    ["맵 4 LPP 알고리즘 선정 시험"],
+    ["맵 10 본 시험"],
+    ["이관 규칙 후보 D = B + 신규 차단 감지 · 조건부 GPP 이관"],
+    ["04 비교 조건을 보완한 순차 실험"],
+    ["05 조건을 반영한 원호 선택"],
+    ["안전 검사"],
+    ["충돌·미관측·차량 제약 위반 후보 제외"],
+    ["원호 평가"],
+    ["여유 부족과 GPP 경로 편차를 함께 평가"],
+    ["Wp =", "0.04 선택"],
+    ["06 비교 결과와 적용 판정"],
+    ["맵9 시간·여유 목표 미달 → D 최종 적용 보류"],
+    ["결론", "저속 야지·Pi 연산 제약에 맞춰 GPP·LPP 역할 이관을 설계하고, 완주·장애물 여유·계산 지연으로 적용 가능성을 평가"]
+  ],
+  "slide3_goal_exact": ["목표", "'저속' · '야지' 에서 누가·언제·얼마나 계산할 것인가"],
+  "slide3_right_overlay_captions_and_footnotes": [
+    ["4개 알고리즘 별, 두 임무 총 40회 유효 완주"],
+    ["표시 영역은 시험용 비용지도 교란"],
+    ["PC: Gazebo·인지·GPP  /  Raspberry Pi 4: LPP"],
+    ["dᵢ: 차체 외곽과 관측 차단셀의 거리 / eᵢ: GPP 경로 편차"],
+    ["3개 후보 × 각 5회, 총 15회 비교 평균 시간·양 장치 CPU가 낮은 절충값"],
+    ["맵10 비용지도 교란 · 4조건 × 2사건 × 3회 = 24회 · Pi 4 연산"],
+    ["C도 6/6 완주 · 완주 외 성과 평균(A·B 지속 n=2) · 여유는 지도상 거리"]
+  ],
+  "additional_visual_checks": [
+    "Enlarged slide3-footer-symbol-detail.png confirms footer GPP·LPP uses centered middle dot, not period.",
+    "Enlarged slide3-goal-detail.png confirms BOTH 저속 and 야지 have single quotes, and source has a visible space between closing 야지 quote and 에서.",
+    "Enlarged slide4-year-detail.png confirms 2012 착수 ~ 2017 전투용 적합."
+  ]
+}

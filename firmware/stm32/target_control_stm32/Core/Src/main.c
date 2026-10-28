@@ -29,6 +29,8 @@
 #include "control/steering_controller.h"
 #include "actuator/sg90_mapper.h"
 #include "platform/stm32_pwm_backend.h"
+#include "protocol/uart_rx_stream.h"
+#include "diagnostics/runtime_probe.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -131,6 +133,13 @@ volatile uint32_t pwm_ccr2_debug = 0U;
 
 
 
+volatile RuntimeProbe runtime_probe = {0};
+volatile uint32_t received_frames = 0U, dropped_targets = 0U;
+volatile uint32_t rejected_windows = 0U, accepted_targets = 0U;
+volatile uint32_t invalid_targets = 0U;
+volatile uint32_t uart_rx_gap_resets = 0U;
+volatile uint32_t probe_clock_hz = 0U, probe_tick_hz = 0U;
+volatile uint32_t probe_period_us = CONTROL_TASK_PERIOD_MS * 1000U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -147,6 +156,16 @@ void StartControlTask(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static uint32_t platform_now_ms(void)
+{
+    return (uint32_t)(((uint64_t)osKernelGetTickCount() * 1000U) /
+                      osKernelGetTickFreq());
+}
+static uint32_t probe_elapsed_us(uint32_t counts)
+{
+    return (uint32_t)(((uint64_t)counts * 1000000U) / SystemCoreClock);
+}
+
 
 /* USER CODE END 0 */
 
@@ -206,6 +225,7 @@ int main(void)
   targetCommandQueueHandle = osMessageQueueNew (4, sizeof(TargetState), &targetCommandQueue_attributes);
 
   /* USER CODE BEGIN RTOS_QUEUES */
+  if (targetCommandQueueHandle == NULL) Error_Handler();
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
 
@@ -217,6 +237,7 @@ int main(void)
   ControlTaskHandle = osThreadNew(StartControlTask, NULL, &ControlTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+  if (CommRxTaskHandle == NULL || ControlTaskHandle == NULL) Error_Handler();
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -647,49 +668,30 @@ static void MX_GPIO_Init(void)
 void StartCommRxTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-
-	  for (;;)
-	  {
-	      if (HAL_UART_Receive(
-	              &huart1,
-	              rx_buffer,
-	              sizeof(rx_buffer),
-	              HAL_MAX_DELAY) == HAL_OK)
-	      {
-	          rx_complete = 1U;
-
-	          frame_validation_result =
-	              uart_frame_validate_target_command(
-	                  rx_buffer,
-	                  sizeof(rx_buffer));
-
-	          if (frame_validation_result == UART_FRAME_VALID)
-	          {
-	        	  if (target_command_deserialize(
-	        	          &rx_buffer[UART_FRAME_PAYLOAD_OFFSET],
-	        	          TARGET_COMMAND_WIRE_SIZE,
-	        	          &received_command))
-	        	  {
-	        	      target_command_ready = 1U;
-
-	        	      const TargetState target = {
-	        	          .x_cm = received_command.target_x,
-	        	          .y_cm = received_command.target_y
-	        	      };
-
-	        	      if (osMessageQueuePut(
-	        	              targetCommandQueueHandle,
-	        	              &target,
-	        	              0U,
-	        	              osWaitForever) == osOK)
-	        	      {
-	        	          queue_send_success = 1U;
-	        	      }
-	        	  }
-	          }
-	      }
-	  }
-
+    UartRxStream stream = {0};
+    if (!uart_rx_start()) {
+        osThreadExit();
+        return;
+    }
+    for (;;) {
+        UartRxByte item;
+        if (uart_rx_wait(&item)) {
+            if (uart_rx_stream_push(&stream, &item, &received_command)) {
+                rx_complete = 1U;
+                frame_validation_result = UART_FRAME_VALID;
+                target_command_ready = 1U;
+                ++received_frames;
+                const TargetState target = {
+                    received_command.target_x, received_command.target_y
+                };
+                queue_send_success = osMessageQueuePut(
+                    targetCommandQueueHandle, &target, 0U, 0U) == osOK;
+                if (!queue_send_success) ++dropped_targets;
+            }
+            rejected_windows = stream.frame.rejected_windows;
+            uart_rx_gap_resets = stream.gap_resets;
+        }
+    }
 
   /* USER CODE END 5 */
 }
@@ -766,22 +768,36 @@ void StartControlTask(void *argument)
 
     pwm_backend_start_success = 1U;
 
-    uint32_t next_wake_tick =
-        osKernelGetTickCount();
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0U;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    probe_clock_hz = SystemCoreClock;
+    probe_tick_hz = osKernelGetTickFreq();
+    const uint32_t period_ticks = (uint32_t)(
+        ((uint64_t)CONTROL_TASK_PERIOD_MS * probe_tick_hz) / 1000U);
+    if (period_ticks == 0U) {
+        osThreadExit();
+        return;
+    }
+    uint32_t next_wake_tick = osKernelGetTickCount() + 1U;
+    osDelayUntil(next_wake_tick);
+    uint32_t expected_count = DWT->CYCCNT;
+    const uint32_t period_counts = (uint32_t)(
+        ((uint64_t)period_ticks * SystemCoreClock) / probe_tick_hz);
 
     for (;;)
     {
-        while (osMessageQueueGet(
+        const uint32_t started_count = DWT->CYCCNT;
+        for (unsigned int drained = 0U; drained < 4U; ++drained) {
+            if (osMessageQueueGet(
                    targetCommandQueueHandle,
                    &target,
                    NULL,
-                   0U) == osOK)
-        {
+                   0U) != osOK) break;
             queue_received_target = target;
             queue_receive_success = 1U;
 
-            const uint32_t target_update_ms =
-                osKernelGetTickCount();
+            const uint32_t target_update_ms = platform_now_ms();
 
             controller_target_update_success =
                 steering_controller_update_target(
@@ -793,37 +809,32 @@ void StartControlTask(void *argument)
 
             if (controller_target_update_success != 0U)
             {
-                last_target_update_ms_debug =
-                    target_update_ms;
+                last_target_update_ms_debug = target_update_ms;
+                ++accepted_targets;
+            } else {
+                ++invalid_targets;
             }
         }
 
-        const uint32_t now_ms =
-            osKernelGetTickCount();
+        const uint32_t now_ms = platform_now_ms();
 
         controller_now_ms = now_ms;
 
-        desired_steering_deg =
-            steering_controller_step(
+        PwmCommand pwm_command = {0};
+        const uint32_t common_started = DWT->CYCCNT;
+        const float angle = steering_controller_step(
                 &controller,
                 now_ms);
 
-        ++controller_step_count;
-
-        /*
-         * Common steering semantics
-         *          ↓
-         * SG90-specific mapping
-         */
-        PwmCommand pwm_command = {0};
-
-        sg90_map_success =
+        const bool mapped =
             sg90_mapper_map(
                 &sg90_config,
-                desired_steering_deg,
-                &pwm_command)
-                ? 1U
-                : 0U;
+                angle,
+                &pwm_command);
+        const uint32_t common_finished = DWT->CYCCNT;
+        desired_steering_deg = angle;
+        sg90_map_success = mapped ? 1U : 0U;
+        ++controller_step_count;
 
         if (sg90_map_success != 0U)
         {
@@ -882,9 +893,20 @@ void StartControlTask(void *argument)
             }
         }
 
-        next_wake_tick +=
-            CONTROL_TASK_PERIOD_MS;
-
+        const uint32_t finished_count = DWT->CYCCNT;
+        RuntimeSample sample = {0};
+        sample.common_us = probe_elapsed_us(common_finished - common_started);
+        sample.work_us = probe_elapsed_us(finished_count - started_count);
+        sample.release_error_us = (int32_t)(
+            ((int64_t)(int32_t)(started_count - expected_count) * 1000000LL) /
+            SystemCoreClock);
+        sample.steering_mdeg = (int32_t)(angle * 1000.0f);
+        sample.pulse_us = pwm_command.pulse_width_us;
+        sample.target_x_cm = controller.last_target.x_cm;
+        sample.target_y_cm = controller.last_target.y_cm;
+        runtime_probe_record(&runtime_probe, sample, CONTROL_TASK_PERIOD_MS * 1000U);
+        expected_count += period_counts;
+        next_wake_tick += period_ticks;
         osDelayUntil(next_wake_tick);
     }
 

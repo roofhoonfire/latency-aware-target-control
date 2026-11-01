@@ -19,6 +19,11 @@ The project connects MATLAB/Simulink synthetic perception to a Linux C++ applica
 
 ## 1. Results at a Glance
 
+The current v2 scheduling design gives control higher task priority than receive,
+adds busy-budget and skipped-release accounting, and defines a bounded workload
+qualification procedure. See [RTOS timing contract](docs/realtime_contract.md).
+Its 20 ms deadline / 5 ms busy budget are design requirements, not measured results.
+
 | Item                                        | Verified result                                                             |
 | ------------------------------------------- | --------------------------------------------------------------------------- |
 | Shared-source portability                   | Same `steering_controller.c` and `sg90_mapper.c` executed on STM32 and Zynq |
@@ -162,6 +167,19 @@ The live packet contains five little-endian doubles:
 | Packet size       | `40 bytes`  |
 
 The Simulink Python Code block acts as the UDP transport adapter. Control and actuator logic execute downstream.
+
+In live mode, Linux accepts only samples whose finite `time_sec` is strictly
+greater than the last accepted simulation timestamp. Older and duplicate samples
+are discarded before UART frame construction and do not consume a UART sequence
+number. The first valid sample, including timestamp zero, is accepted. Invalid
+UDP packets are rejected by the receiver before this ordering check.
+
+One live application run represents one simulation run. Restart the Linux
+application when restarting Simulink or replaying a recording from the beginning;
+a backwards timestamp does not automatically reset the filter. This check
+prevents older samples from replacing newer ones, but does not measure transport
+delay or enforce a wall-clock sample-age limit. CSV single-command mode is
+unchanged.
 
 ## 5. Communication Contract
 

@@ -18,6 +18,10 @@ for %%T in (crc16 target_command_codec uart_frame_codec uart_frame_validator ste
 )
 popd
 pushd "%LATC_BUILD%"
+cl /nologo /utf-8 /W4 /WX /EHsc /std:c++17 /I"%LATC_ROOT%\pc\include" "%LATC_ROOT%\tests\pc\detection_time_filter_test.cpp" /Fe:detection_time_filter_test.exe
+if errorlevel 1 exit /b 1
+detection_time_filter_test.exe
+if errorlevel 1 exit /b 1
 cl /nologo /utf-8 /W4 /WX /std:c11 /TC /c /I"%LATC_ROOT%\tests\platform\fakes" /I"%LATC_ROOT%\common\include" "%LATC_ROOT%\firmware\stm32\target_control_stm32\Core\Src\stm32_uart_rx.c"
 if errorlevel 1 exit /b 1
 cl /nologo /utf-8 /W4 /WX /EHsc /std:c++17 /DTEST_STM32 /I"%LATC_ROOT%\tests\platform\fakes" /I"%LATC_ROOT%\common\include" "%LATC_ROOT%\tests\platform\uart_rx_irq_test.cpp" stm32_uart_rx.obj /Fe:stm32_uart_rx_test.exe

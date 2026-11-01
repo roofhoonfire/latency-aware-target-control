@@ -29,6 +29,15 @@ class ExerciseTests(unittest.TestCase):
     def test_burst_length(self):
         self.assertEqual(len(exercise.scenario("burst", 200)[0][1]), 3000)
 
+    def test_qualification_load_shapes(self):
+        steady = exercise.scenario("rate100", 100)
+        self.assertAlmostEqual(sum(t for t, _ in steady), 1.0)
+        self.assertEqual(sum(len(b) for _, b in steady), 1500)
+        bursts = exercise.scenario("burst4", 25)
+        self.assertAlmostEqual(sum(t for t, _ in bursts), 1.0)
+        self.assertTrue(all(len(b) == 60 for _, b in bursts))
+        self.assertEqual(bursts[-1][1][-15:], exercise.frame(100))
+
 
 if __name__ == "__main__":
     unittest.main()

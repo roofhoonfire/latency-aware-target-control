@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <iostream>
 #include "diagnostics/runtime_probe.h"
+#include "diagnostics/runtime_schedule.h"
 #include "protocol/target_frame_stream.h"
 #include "protocol/crc16.h"
 
@@ -39,6 +40,27 @@ int main()
     assert(probe.samples == 2 && probe.common_min_us == 3);
     assert(probe.common_max_us == 9 && probe.common_total_us == 12);
     assert(probe.deadline_misses == 1 && probe.release_abs_max_us == 19900);
+    RuntimeProbe boundary_probe{};
+    RuntimeSample boundary{};
+    boundary.release_error_us = 1000;
+    boundary.work_us = 19000;
+    runtime_probe_record(&boundary_probe, boundary, 20000);
+    assert(boundary_probe.deadline_misses == 0);
+    boundary.work_us = 19001;
+    runtime_probe_record(&boundary_probe, boundary, 20000);
+    assert(boundary_probe.deadline_misses == 1);
+    runtime_probe_busy(&probe, 5000, 5000);
+    assert(probe.busy_budget_misses == 0);
+    runtime_probe_busy(&probe, 5001, 5000);
+    assert(probe.busy_budget_misses == 1 && probe.busy_max_us == 5001);
+    uint32_t next = 0;
+    assert(runtime_next_release(100, 105, 20, &next) == 1 && next == 120);
+    assert(runtime_next_release(100, 120, 20, &next) == 2 && next == 140);
+    assert(runtime_next_release(100, 169, 20, &next) == 4 && next == 180);
+    assert(runtime_next_release(UINT32_MAX - 9, UINT32_MAX - 4, 20, &next)
+           == 1 && next == 10);
+    assert(runtime_next_release(UINT32_MAX - 9, 11, 20, &next)
+           == 2 && next == 30);
     for (unsigned i = 0; i < RUNTIME_TRACE_CAPACITY; ++i)
         runtime_probe_record(&probe, RuntimeSample{}, 20000);
     assert(probe.trace_next == 2 && probe.trace[1].cycle == 129);

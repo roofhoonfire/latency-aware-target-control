@@ -27,9 +27,22 @@ typedef struct {
     uint32_t work_max_us;
     uint32_t release_abs_max_us;
     uint32_t deadline_misses;
+    uint32_t busy_max_us;
+    uint32_t busy_budget_misses;
+    uint32_t skipped_releases;
     uint32_t trace_next;
     RuntimeSample trace[RUNTIME_TRACE_CAPACITY];
 } RuntimeProbe;
+
+/* Called after trace recording. Includes trace overhead, but excludes this
+ * constant-size accounting and subsequent scheduler API overhead. Reserve
+ * margin for that tail; this observation is not a WCET bound. */
+static inline void runtime_probe_busy(
+    volatile RuntimeProbe *p, uint32_t busy_us, uint32_t budget_us)
+{
+    if (busy_us > p->busy_max_us) p->busy_max_us = busy_us;
+    if (busy_us > budget_us) ++p->busy_budget_misses;
+}
 
 static inline void runtime_probe_record(
     volatile RuntimeProbe *p, RuntimeSample s, uint32_t period_us)

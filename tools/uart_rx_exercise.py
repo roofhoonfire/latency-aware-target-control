@@ -20,6 +20,11 @@ def scenario(name, count=10):
     """Return (delay BEFORE write in seconds, bytes) pairs."""
     if name == "normal":
         return [(0.1, frame(i + 1, y=-97 if i % 2 == 0 else 97)) for i in range(count)]
+    if name == "rate100":
+        return [(0.01, frame(i + 1, y=-97 if i % 2 == 0 else 97)) for i in range(count)]
+    if name == "burst4":
+        return [(0.04, b"".join(frame(4 * i + j + 1) for j in range(4)))
+                for i in range(count)]
     if name == "fragmented":
         data = frame(1)
         return [(0.005, bytes((b,))) for b in data]
@@ -47,8 +52,12 @@ def send(port, chunks):
         attr[6][termios.VMIN] = 0
         attr[6][termios.VTIME] = 0
         termios.tcsetattr(fd, termios.TCSANOW, attr)
+        next_write = time.monotonic()
         for delay, data in chunks:
-            time.sleep(delay)
+            next_write += delay
+            wait = next_write - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
             remaining = memoryview(data)
             while remaining:
                 n = os.write(fd, remaining)
@@ -64,7 +73,7 @@ def send(port, chunks):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port")
-    parser.add_argument("--case", choices=("normal", "fragmented", "recovery", "invalid", "burst"), default="normal")
+    parser.add_argument("--case", choices=("normal", "rate100", "burst4", "fragmented", "recovery", "invalid", "burst"), default="normal")
     parser.add_argument("--count", type=int, default=10)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()

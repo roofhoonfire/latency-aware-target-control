@@ -1,3 +1,9 @@
+add_executable(detection_time_filter_test pc/detection_time_filter_test.cpp)
+target_include_directories(detection_time_filter_test PRIVATE ../pc/include)
+target_compile_features(detection_time_filter_test PRIVATE cxx_std_17)
+target_compile_options(detection_time_filter_test PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME detection_time_filter_test COMMAND detection_time_filter_test)
+
 add_executable(uart_rx_stream_test common/uart_rx_stream_test.cpp)
 target_link_libraries(uart_rx_stream_test PRIVATE protocol_codec)
 add_test(NAME uart_rx_stream_test COMMAND uart_rx_stream_test)

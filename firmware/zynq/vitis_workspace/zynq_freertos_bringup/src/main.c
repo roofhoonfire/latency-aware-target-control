@@ -7,8 +7,12 @@
 #include "actuator/sg90_mapper.h"
 #include "protocol/uart_rx_stream.h"
 #include "diagnostics/runtime_probe.h"
+#include "diagnostics/runtime_schedule.h"
 
-#define CONTROL_PERIOD_MS 20U
+#define CONTROL_PERIOD_MS LATC_CONTROL_PERIOD_MS
+#ifndef LATC_CONTROL_TASK_PRIORITY
+#define LATC_CONTROL_TASK_PRIORITY (tskIDLE_PRIORITY + 2U)
+#endif
 #define TARGET_QUEUE_CAPACITY 4U
 static QueueHandle_t target_queue;
 volatile RuntimeProbe runtime_probe = {0};
@@ -22,6 +26,11 @@ volatile uint32_t last_sequence = 0U;
 volatile uint32_t uart_rx_gap_resets = 0U;
 volatile uint32_t probe_clock_hz = COUNTS_PER_SECOND;
 volatile uint32_t probe_period_us = CONTROL_PERIOD_MS * 1000U;
+volatile uint32_t probe_schedule_version = 2U;
+volatile uint32_t probe_control_priority = LATC_CONTROL_TASK_PRIORITY;
+volatile uint32_t probe_rx_priority = tskIDLE_PRIORITY + 1U;
+volatile uint32_t probe_busy_budget_us = LATC_CONTROL_BUSY_BUDGET_US;
+volatile uint32_t probe_release_budget_us = 1000U;
 volatile uint32_t probe_tick_hz = configTICK_RATE_HZ;
 
 static uint32_t platform_now_ms(void)
@@ -114,7 +123,16 @@ static void control_task(void *argument)
         sample.target_x_cm = controller.last_target.x_cm;
         sample.target_y_cm = controller.last_target.y_cm;
         runtime_probe_record(&runtime_probe, sample, CONTROL_PERIOD_MS * 1000U);
-        expected += period_counts;
+        runtime_probe_busy(&runtime_probe, elapsed_us(counter_now() - started),
+                           LATC_CONTROL_BUSY_BUDGET_US);
+        uint32_t next;
+        const uint32_t advances = runtime_next_release(
+            (uint32_t)wake, (uint32_t)xTaskGetTickCount(),
+            (uint32_t)period_ticks, &next);
+        runtime_probe.skipped_releases += advances - 1U;
+        expected += (XTime)advances * period_counts;
+        /* vTaskDelayUntil advances its previous-wake argument internally. */
+        wake = (TickType_t)(next - period_ticks);
         vTaskDelayUntil(&wake, period_ticks);
     }
 }
@@ -124,11 +142,11 @@ int main(void)
     target_queue = xQueueCreate(TARGET_QUEUE_CAPACITY, sizeof(TargetState));
     if (target_queue == NULL) return 1;
     xil_printf("Zynq IRQ RX -> receive task -> target queue -> control\r\n");
-    /* Equal application priorities, matching the STM32 reference tasks. */
+    /* Control preempts the receive task; UART IRQ still captures incoming bytes. */
     if (xTaskCreate(receive_task, "CommRx", 1024U, NULL,
                     tskIDLE_PRIORITY + 1U, NULL) != pdPASS ||
         xTaskCreate(control_task, "Control", 1024U, NULL,
-                    tskIDLE_PRIORITY + 1U, NULL) != pdPASS)
+                    LATC_CONTROL_TASK_PRIORITY, NULL) != pdPASS)
         return 1;
     vTaskStartScheduler();
     return 1;

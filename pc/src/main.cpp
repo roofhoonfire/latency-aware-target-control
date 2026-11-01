@@ -9,6 +9,7 @@
 #include <limits>
 
 #include "input/detection_csv_reader.h"
+#include "input/detection_time_filter.h"
 #include "input/udp_detection_receiver.h"
 
 #include "protocol/target_command.h"
@@ -343,6 +344,7 @@ int run_live_mode(
     latc::transport::SerialPort* serial_port)
 {
     latc::input::UdpDetectionReceiver receiver;
+    latc::input::DetectionTimeFilter time_filter;
 
     if (!receiver.open())
     {
@@ -375,6 +377,14 @@ int run_live_mode(
                 << '\n';
 
             return 1;
+        }
+
+        // Reject stale/duplicate simulation samples before UART encoding.
+        // Transmission failure exits this session, so no later sample can
+        // observe a timestamp accepted here but not successfully forwarded.
+        if (!time_filter.accept(detection.time_sec))
+        {
+            continue;
         }
 
         if (!transmit_detection(

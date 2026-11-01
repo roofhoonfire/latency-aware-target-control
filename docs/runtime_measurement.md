@@ -1,5 +1,9 @@
 # Live Zynq input and runtime comparison
 
+**v2 scheduling update:** see [timing contract](realtime_contract.md). Control now
+has higher task priority than receive, uses a 5 ms busy-interval budget, and skips
+overdue releases. These are source changes pending ARM/board qualification.
+
 ## Status and scope
 
 Source implementation added; ARM firmware builds, live UART reception, and board

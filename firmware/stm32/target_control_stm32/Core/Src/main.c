@@ -31,6 +31,7 @@
 #include "platform/stm32_pwm_backend.h"
 #include "protocol/uart_rx_stream.h"
 #include "diagnostics/runtime_probe.h"
+#include "diagnostics/runtime_schedule.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,7 +41,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define CONTROL_TASK_PERIOD_MS   20U
+#define CONTROL_TASK_PERIOD_MS   LATC_CONTROL_PERIOD_MS
+#ifndef LATC_CONTROL_TASK_PRIORITY
+#define LATC_CONTROL_TASK_PRIORITY osPriorityAboveNormal
+#endif
 #define TARGET_TIMEOUT_MS       400U
 /*
  * TIM4 clock after prescaler:
@@ -82,7 +86,7 @@ osThreadId_t ControlTaskHandle;
 const osThreadAttr_t ControlTask_attributes = {
   .name = "ControlTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) LATC_CONTROL_TASK_PRIORITY,
 };
 /* Definitions for targetCommandQueue */
 osMessageQueueId_t targetCommandQueueHandle;
@@ -140,6 +144,11 @@ volatile uint32_t invalid_targets = 0U;
 volatile uint32_t uart_rx_gap_resets = 0U;
 volatile uint32_t probe_clock_hz = 0U, probe_tick_hz = 0U;
 volatile uint32_t probe_period_us = CONTROL_TASK_PERIOD_MS * 1000U;
+volatile uint32_t probe_schedule_version = 2U;
+volatile uint32_t probe_control_priority = LATC_CONTROL_TASK_PRIORITY;
+volatile uint32_t probe_rx_priority = osPriorityNormal;
+volatile uint32_t probe_busy_budget_us = LATC_CONTROL_BUSY_BUDGET_US;
+volatile uint32_t probe_release_budget_us = 1000U;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -905,8 +914,13 @@ void StartControlTask(void *argument)
         sample.target_x_cm = controller.last_target.x_cm;
         sample.target_y_cm = controller.last_target.y_cm;
         runtime_probe_record(&runtime_probe, sample, CONTROL_TASK_PERIOD_MS * 1000U);
-        expected_count += period_counts;
-        next_wake_tick += period_ticks;
+        runtime_probe_busy(&runtime_probe,
+            probe_elapsed_us(DWT->CYCCNT - started_count),
+            LATC_CONTROL_BUSY_BUDGET_US);
+        const uint32_t advances = runtime_next_release(
+            next_wake_tick, osKernelGetTickCount(), period_ticks, &next_wake_tick);
+        runtime_probe.skipped_releases += advances - 1U;
+        expected_count += advances * period_counts;
         osDelayUntil(next_wake_tick);
     }
 
